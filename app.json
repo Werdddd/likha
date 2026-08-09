@@ -1,11 +1,13 @@
 {
   "expo": {
-    "name": "likha-scaffold",
-    "slug": "likha-scaffold",
+    "name": "Likha",
+    "slug": "likha",
+    "scheme": "likha",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -20,6 +22,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-splash-screen"
+    ]
   }
 }
