@@ -10,7 +10,8 @@ export default function AuthLayout() {
         contentStyle: { backgroundColor: colors.canvas },
       }}
     >
-      <Stack.Screen name="welcome" />
+      <Stack.Screen name="splash" />
+      <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
       <Stack.Screen name="sign-up" />
       <Stack.Screen name="log-in" />
       <Stack.Screen name="onboarding-mode" />

@@ -7,7 +7,7 @@ export default function Index() {
   const hasCompletedOnboarding = useSessionStore((s) => s.hasCompletedOnboarding);
 
   if (!isAuthenticated) {
-    return <Redirect href="/(auth)/welcome" />;
+    return <Redirect href="/(auth)/splash" />;
   }
 
   if (!hasCompletedOnboarding) {
