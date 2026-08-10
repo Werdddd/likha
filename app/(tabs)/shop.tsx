@@ -6,19 +6,39 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FilterBar } from '../../components/FilterBar';
 import { ListingGrid } from '../../components/ListingGrid';
-import { AnimatedPressable } from '../../components/ui';
-import { disciplines, getCreatorById, listings } from '../../constants/mock-data';
+import { AnimatedPressable, Chip } from '../../components/ui';
+import { digitalCategories, getCreatorById, listings, physicalCategories } from '../../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../../constants/theme';
 import { useCartStore } from '../../store/cart-store';
-import type { Discipline } from '../../types';
+import type { ProductCategory, ProductType } from '../../types';
+
+const PRODUCT_TYPE_FILTERS: Array<{ value: ProductType; label: string }> = [
+  { value: 'digital', label: 'Digital' },
+  { value: 'physical', label: 'Physical' },
+];
 
 export default function ShopScreen() {
-  const [category, setCategory] = useState<Discipline | null>(null);
+  const [productType, setProductType] = useState<ProductType | null>(null);
+  const [category, setCategory] = useState<ProductCategory | null>(null);
   const cartCount = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0));
 
+  const categoryOptions =
+    productType === 'digital' ? digitalCategories : productType === 'physical' ? physicalCategories : [...digitalCategories, ...physicalCategories];
+
+  const handleSelectProductType = (value: ProductType | null) => {
+    setProductType(value);
+    const options = value === 'digital' ? digitalCategories : value === 'physical' ? physicalCategories : null;
+    if (options && category && !(options as ProductCategory[]).includes(category)) {
+      setCategory(null);
+    }
+  };
+
   const filteredListings = useMemo(
-    () => (category ? listings.filter((l) => l.category === category) : listings),
-    [category],
+    () =>
+      listings.filter(
+        (l) => (!productType || l.productType === productType) && (!category || l.category === category),
+      ),
+    [productType, category],
   );
 
   return (
@@ -40,11 +60,23 @@ export default function ShopScreen() {
         </View>
       </View>
 
+      <View style={styles.typeRow}>
+        <Chip label="All" selected={productType === null} onPress={() => handleSelectProductType(null)} />
+        {PRODUCT_TYPE_FILTERS.map((option) => (
+          <Chip
+            key={option.value}
+            label={option.label}
+            selected={productType === option.value}
+            onPress={() => handleSelectProductType(productType === option.value ? null : option.value)}
+          />
+        ))}
+      </View>
+
       <View style={styles.filterBar}>
         <FilterBar
-          options={disciplines}
+          options={categoryOptions}
           selected={category}
-          onSelect={(value) => setCategory(value as Discipline | null)}
+          onSelect={(value) => setCategory(value as ProductCategory | null)}
         />
       </View>
 
@@ -108,6 +140,12 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: colors.white,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
   filterBar: {
     marginBottom: spacing.sm,

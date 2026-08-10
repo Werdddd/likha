@@ -17,6 +17,21 @@ export type Region =
   | 'Baguio'
   | 'Bacolod';
 
+export type ProductType = 'digital' | 'physical';
+
+export type DigitalCategory =
+  | 'Digital Art'
+  | 'Templates'
+  | 'Illustrations'
+  | 'Stickers'
+  | 'Fonts'
+  | 'UI Kits'
+  | 'Presets';
+
+export type PhysicalCategory = 'Prints' | 'Crafts' | 'Photography Prints';
+
+export type ProductCategory = DigitalCategory | PhysicalCategory;
+
 export interface Creator {
   id: string;
   name: string;
@@ -71,7 +86,8 @@ export interface Listing {
   coverUrl: string;
   images: string[];
   price: number;
-  category: Discipline;
+  productType: ProductType;
+  category: ProductCategory;
   tags: string[];
   stock: number | null;
   createdAt: string;

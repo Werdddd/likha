@@ -57,7 +57,8 @@ export default function ListingDetailScreen() {
     );
   }
 
-  const soldOut = listing.stock === 0;
+  const isDigital = listing.productType === 'digital';
+  const soldOut = !isDigital && listing.stock === 0;
 
   const handleAddToCart = () => addItem(listing.id, quantity);
   const handleBuyNow = () => {
@@ -110,6 +111,14 @@ export default function ListingDetailScreen() {
           <Text style={styles.description}>{listing.description}</Text>
 
           <View style={styles.tagRow}>
+            <View style={styles.productTypeTag}>
+              <Ionicons
+                name={isDigital ? 'cloud-download-outline' : 'cube-outline'}
+                size={12}
+                color={colors.ink}
+              />
+              <Text style={styles.productTypeTagLabel}>{isDigital ? 'Digital' : 'Physical'}</Text>
+            </View>
             <Text style={styles.tag}>{listing.category}</Text>
             {listing.tags.map((tag) => (
               <Text key={tag} style={styles.tag}>
@@ -119,7 +128,13 @@ export default function ListingDetailScreen() {
           </View>
 
           <Text style={styles.stock}>
-            {soldOut ? 'Sold out' : listing.stock === null ? 'Made to order' : `${listing.stock} in stock`}
+            {isDigital
+              ? 'Instant download after purchase'
+              : soldOut
+                ? 'Sold out'
+                : listing.stock === null
+                  ? 'Made to order'
+                  : `${listing.stock} in stock`}
           </Text>
 
           {linkedProject && (
@@ -132,7 +147,7 @@ export default function ListingDetailScreen() {
             </Link>
           )}
 
-          {!soldOut && (
+          {!soldOut && !isDigital && (
             <View style={styles.purchaseRow}>
               <Text style={styles.sectionLabel}>Quantity</Text>
               <QuantityStepper quantity={quantity} onChange={setQuantity} max={listing.stock ?? 99} />
@@ -148,7 +163,7 @@ export default function ListingDetailScreen() {
               style={styles.actionButton}
             />
             <Button
-              label="Buy Now"
+              label={isDigital ? 'Buy & Download' : 'Buy Now'}
               disabled={soldOut}
               onPress={handleBuyNow}
               style={styles.actionButton}
@@ -228,6 +243,20 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginTop: spacing.md,
     gap: spacing.xs,
+  },
+  productTypeTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.likhaYellow,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  productTypeTagLabel: {
+    ...t.caption,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.ink,
   },
   tag: {
     ...t.caption,

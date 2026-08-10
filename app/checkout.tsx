@@ -50,16 +50,23 @@ export default function CheckoutScreen() {
     [items],
   );
 
+  const requiresShipping = useMemo(
+    () => items.some((item) => getListingById(item.listingId)?.productType === 'physical'),
+    [items],
+  );
+
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const total = subtotal + SHIPPING_FEE;
+  const shippingFee = requiresShipping ? SHIPPING_FEE : 0;
+  const total = subtotal + shippingFee;
 
   const canSubmit =
     orderItems.length > 0 &&
-    fullName.trim().length > 0 &&
-    phone.trim().length > 0 &&
-    line1.trim().length > 0 &&
-    city.trim().length > 0 &&
-    postalCode.trim().length > 0;
+    (!requiresShipping ||
+      (fullName.trim().length > 0 &&
+        phone.trim().length > 0 &&
+        line1.trim().length > 0 &&
+        city.trim().length > 0 &&
+        postalCode.trim().length > 0));
 
   const handlePlaceOrder = () => {
     const address: Address = {
@@ -75,7 +82,7 @@ export default function CheckoutScreen() {
       id: `o${Date.now()}`,
       items: orderItems,
       subtotal,
-      shippingFee: SHIPPING_FEE,
+      shippingFee,
       total,
       address,
       paymentMethod,
@@ -90,13 +97,17 @@ export default function CheckoutScreen() {
       <Stack.Screen options={{ title: 'Checkout' }} />
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.sectionLabel}>Shipping address</Text>
-        <TextField label="Full name" placeholder="Juan Dela Cruz" value={fullName} onChangeText={setFullName} />
-        <TextField label="Phone" placeholder="09XX XXX XXXX" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
-        <TextField label="Address" placeholder="House no., street, barangay" value={line1} onChangeText={setLine1} />
-        <TextField label="City" placeholder="City" value={city} onChangeText={setCity} />
-        <SelectField label="Region" value={region} options={regions} onChange={(v) => setRegion(v as Region)} />
-        <TextField label="Postal code" placeholder="1000" keyboardType="numeric" value={postalCode} onChangeText={setPostalCode} />
+        {requiresShipping && (
+          <>
+            <Text style={styles.sectionLabel}>Shipping address</Text>
+            <TextField label="Full name" placeholder="Juan Dela Cruz" value={fullName} onChangeText={setFullName} />
+            <TextField label="Phone" placeholder="09XX XXX XXXX" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+            <TextField label="Address" placeholder="House no., street, barangay" value={line1} onChangeText={setLine1} />
+            <TextField label="City" placeholder="City" value={city} onChangeText={setCity} />
+            <SelectField label="Region" value={region} options={regions} onChange={(v) => setRegion(v as Region)} />
+            <TextField label="Postal code" placeholder="1000" keyboardType="numeric" value={postalCode} onChangeText={setPostalCode} />
+          </>
+        )}
 
         <Text style={styles.sectionLabel}>Payment method</Text>
         <View style={styles.chipWrap}>
@@ -125,10 +136,12 @@ export default function CheckoutScreen() {
             <Text style={styles.summaryLabel}>Subtotal</Text>
             <Text style={styles.summaryValue}>{formatPrice(subtotal)}</Text>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Shipping</Text>
-            <Text style={styles.summaryValue}>{formatPrice(SHIPPING_FEE)}</Text>
-          </View>
+          {requiresShipping && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Shipping</Text>
+              <Text style={styles.summaryValue}>{formatPrice(shippingFee)}</Text>
+            </View>
+          )}
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
             <Text style={styles.totalLabel}>Total</Text>

@@ -3,20 +3,26 @@ import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { disciplines, getProjectsByCreator } from '../constants/mock-data';
+import { digitalCategories, getProjectsByCreator, physicalCategories } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
 import { useSessionStore } from '../store/session-store';
-import type { Discipline } from '../types';
+import type { ProductCategory, ProductType } from '../types';
 import { AnimatedPressable, Button, Chip, SelectField, TextField } from './ui';
 
 export interface ListingFormValues {
   title: string;
   description: string;
   price: number;
-  category: Discipline;
+  productType: ProductType;
+  category: ProductCategory;
   stock: number | null;
   projectId?: string;
 }
+
+const PRODUCT_TYPES: Array<{ value: ProductType; label: string }> = [
+  { value: 'digital', label: 'Digital (instant download)' },
+  { value: 'physical', label: 'Physical / made-to-order' },
+];
 
 interface ListingFormProps {
   submitLabel: string;
@@ -33,10 +39,21 @@ export function ListingForm({ submitLabel, onSubmit }: ListingFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [category, setCategory] = useState<Discipline>('Illustration');
+  const [productType, setProductType] = useState<ProductType>('digital');
+  const [category, setCategory] = useState<ProductCategory>(digitalCategories[0]);
   const [stock, setStock] = useState('');
   const [projectTitle, setProjectTitle] = useState(NO_PROJECT);
   const [mediaSeeds, setMediaSeeds] = useState<string[]>(placeholderMedia);
+
+  const categoryOptions = productType === 'digital' ? digitalCategories : physicalCategories;
+
+  const handleSelectProductType = (value: ProductType) => {
+    setProductType(value);
+    const options = value === 'digital' ? digitalCategories : physicalCategories;
+    if (!(options as ProductCategory[]).includes(category)) {
+      setCategory(options[0]);
+    }
+  };
 
   const priceValue = Number(price);
   const canSubmit = title.trim().length > 0 && description.trim().length > 0 && priceValue > 0;
@@ -47,8 +64,9 @@ export function ListingForm({ submitLabel, onSubmit }: ListingFormProps) {
       title: title.trim(),
       description: description.trim(),
       price: priceValue,
+      productType,
       category,
-      stock: stock.trim().length > 0 ? Number(stock) : null,
+      stock: productType === 'digital' ? null : stock.trim().length > 0 ? Number(stock) : null,
       projectId: linkedProject?.id,
     });
   };
@@ -91,17 +109,32 @@ export function ListingForm({ submitLabel, onSubmit }: ListingFormProps) {
         value={price}
         onChangeText={setPrice}
       />
-      <TextField
-        label="Stock (leave blank for made-to-order)"
-        placeholder="e.g. 10"
-        keyboardType="numeric"
-        value={stock}
-        onChangeText={setStock}
-      />
+
+      <Text style={styles.sectionLabel}>Product type</Text>
+      <View style={styles.chipWrap}>
+        {PRODUCT_TYPES.map((option) => (
+          <Chip
+            key={option.value}
+            label={option.label}
+            selected={productType === option.value}
+            onPress={() => handleSelectProductType(option.value)}
+          />
+        ))}
+      </View>
+
+      {productType === 'physical' && (
+        <TextField
+          label="Stock (leave blank for made-to-order)"
+          placeholder="e.g. 10"
+          keyboardType="numeric"
+          value={stock}
+          onChangeText={setStock}
+        />
+      )}
 
       <Text style={styles.sectionLabel}>Category</Text>
       <View style={styles.chipWrap}>
-        {disciplines.map((d) => (
+        {categoryOptions.map((d) => (
           <Chip key={d} label={d} selected={category === d} onPress={() => setCategory(d)} />
         ))}
       </View>

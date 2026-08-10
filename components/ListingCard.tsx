@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -26,6 +27,15 @@ export function ListingCard({ listing, creator, onPress }: ListingCardProps) {
   return (
     <AnimatedPressable onPress={onPress} style={styles.card} scaleTo={0.97}>
       <Image source={{ uri: listing.coverUrl }} style={[styles.cover, { aspectRatio: ratio }]} contentFit="cover" />
+
+      <View style={styles.typeBadge}>
+        <Ionicons
+          name={listing.productType === 'digital' ? 'cloud-download-outline' : 'cube-outline'}
+          size={11}
+          color={colors.white}
+        />
+        <Text style={styles.typeBadgeLabel}>{listing.productType === 'digital' ? 'Digital' : 'Physical'}</Text>
+      </View>
 
       <View style={styles.topContent}>
         {creator && (
@@ -67,6 +77,24 @@ const styles = StyleSheet.create({
     right: 0,
     padding: spacing.sm,
     gap: 4,
+  },
+  typeBadge: {
+    position: 'absolute',
+    top: spacing.xs + 2,
+    right: spacing.xs + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.ink + 'B3',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: 3,
+  },
+  typeBadgeLabel: {
+    ...t.caption,
+    fontSize: 10,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.white,
   },
   creatorRow: {
     flexDirection: 'row',

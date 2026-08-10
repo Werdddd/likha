@@ -1,4 +1,14 @@
-import type { Creator, Discipline, Listing, Notification, Project, Region } from '../types';
+import type {
+  Creator,
+  DigitalCategory,
+  Discipline,
+  Listing,
+  Notification,
+  PhysicalCategory,
+  Project,
+  ProductCategory,
+  Region,
+} from '../types';
 
 export const disciplines: Discipline[] = [
   'Illustration',
@@ -11,6 +21,20 @@ export const disciplines: Discipline[] = [
 ];
 
 export const regions: Region[] = ['Manila', 'Cebu', 'Davao', 'Iloilo', 'Baguio', 'Bacolod'];
+
+export const digitalCategories: DigitalCategory[] = [
+  'Digital Art',
+  'Templates',
+  'Illustrations',
+  'Stickers',
+  'Fonts',
+  'UI Kits',
+  'Presets',
+];
+
+export const physicalCategories: PhysicalCategory[] = ['Prints', 'Crafts', 'Photography Prints'];
+
+export const productCategories: ProductCategory[] = [...digitalCategories, ...physicalCategories];
 
 const avatar = (seed: string) => `https://picsum.photos/seed/${seed}/200/200`;
 const cover = (seed: string) => `https://picsum.photos/seed/${seed}/800/500`;
@@ -186,19 +210,25 @@ const listingSeeds: Array<{
   title: string;
   description: string;
   price: number;
-  category: Discipline;
+  productType: 'digital' | 'physical';
+  category: ProductCategory;
   tags: string[];
   stock: number | null;
 }> = [
-  { creatorId: 'c1', projectId: 'p1', title: 'Buwan ng Wika Print Set', description: 'A set of five giclée art prints from the Buwan ng Wika editorial series, printed on 250gsm matte stock.', price: 850, category: 'Illustration', tags: ['print', 'editorial'], stock: 25 },
-  { creatorId: 'c1', title: 'Custom Character Commission', description: 'A fully rendered character illustration, tailored to your brief. Includes two rounds of revisions.', price: 3500, category: 'Illustration', tags: ['commission', 'character design'], stock: null },
-  { creatorId: 'c2', title: 'Mobile UI Kit — Sari-Sari Style', description: 'A Figma component library of 60+ mobile screens inspired by neighborhood store ordering apps.', price: 1200, category: 'UI/UX Design', tags: ['ui kit', 'figma'], stock: 50 },
-  { creatorId: 'c2', title: 'Design System Audit', description: "A one-hour consult reviewing your product's design system, with a written action-item report.", price: 2500, category: 'UI/UX Design', tags: ['consulting'], stock: null },
-  { creatorId: 'c4', projectId: 'p10', title: 'Aswang Reimagined Art Print', description: 'A museum-quality print of the Aswang Reimagined 3D character series, signed and numbered.', price: 950, category: '3D Art', tags: ['print', 'folklore'], stock: 15 },
-  { creatorId: 'c4', title: 'Custom 3D Character Render', description: 'A stylized 3D character render built to spec in Blender, delivered as a high-res still.', price: 5000, category: '3D Art', tags: ['commission', 'blender'], stock: null },
-  { creatorId: 'c5', projectId: 'p12', title: 'Manggahan Branding Package', description: 'Full branding suite: logo, color system, and banig-inspired pattern library, delivered with usage guidelines.', price: 8000, category: 'Graphic Design', tags: ['branding'], stock: null },
-  { creatorId: 'c5', title: 'Banig Pattern Sticker Pack', description: 'A pack of 12 vinyl stickers featuring hand-drawn banig-inspired patterns.', price: 250, category: 'Graphic Design', tags: ['stickers', 'pattern'], stock: 100 },
-  { creatorId: 'c7', title: 'Brand Voice Copywriting Package', description: 'A full brand-voice package: tone guide, tagline options, and sample copy for your top three channels.', price: 4500, category: 'Writing', tags: ['copywriting'], stock: null },
+  { creatorId: 'c1', projectId: 'p1', title: 'Buwan ng Wika Print Set', description: 'A set of five giclée art prints from the Buwan ng Wika editorial series, printed on 250gsm matte stock.', price: 850, productType: 'physical', category: 'Prints', tags: ['print', 'editorial'], stock: 25 },
+  { creatorId: 'c1', title: 'Custom Character Illustration', description: 'A fully rendered character illustration, tailored to your brief. Delivered as a high-res digital file with two rounds of revisions.', price: 3500, productType: 'digital', category: 'Illustrations', tags: ['commission', 'character design'], stock: null },
+  { creatorId: 'c2', title: 'Mobile UI Kit — Sari-Sari Style', description: 'A Figma component library of 60+ mobile screens inspired by neighborhood store ordering apps.', price: 1200, productType: 'digital', category: 'UI Kits', tags: ['ui kit', 'figma'], stock: null },
+  { creatorId: 'c2', title: 'Design System Starter Templates', description: "A Figma template pack with a written action-item guide for auditing your product's design system.", price: 2500, productType: 'digital', category: 'Templates', tags: ['design systems', 'figma'], stock: null },
+  { creatorId: 'c3', title: 'Davao Streets Film Print Set', description: 'A set of six archival photography prints from the Davao Streets black-and-white film series, printed on fine art paper.', price: 1400, productType: 'physical', category: 'Photography Prints', tags: ['print', 'film', 'street'], stock: 20 },
+  { creatorId: 'c3', title: 'Golden Hour Lightroom Presets', description: 'A pack of 15 Lightroom presets for warm, film-inspired color grading, developed for the Golden Hour, Samal series.', price: 450, productType: 'digital', category: 'Presets', tags: ['lightroom', 'presets'], stock: null },
+  { creatorId: 'c4', projectId: 'p10', title: 'Aswang Reimagined Art Print', description: 'A museum-quality print of the Aswang Reimagined 3D character series, signed and numbered.', price: 950, productType: 'physical', category: 'Prints', tags: ['print', 'folklore'], stock: 15 },
+  { creatorId: 'c4', title: 'Custom 3D Character Render', description: 'A stylized 3D character render built to spec in Blender, delivered as a high-res digital still.', price: 5000, productType: 'digital', category: 'Digital Art', tags: ['commission', 'blender'], stock: null },
+  { creatorId: 'c5', projectId: 'p12', title: 'Manggahan Branding Templates', description: 'Full branding template suite: logo files, color system, and banig-inspired pattern library, with usage guidelines.', price: 8000, productType: 'digital', category: 'Templates', tags: ['branding'], stock: null },
+  { creatorId: 'c5', title: 'Banig Pattern Sticker Pack', description: 'A digital sticker pack of 12 hand-drawn banig-inspired patterns, print-at-home ready.', price: 250, productType: 'digital', category: 'Stickers', tags: ['stickers', 'pattern'], stock: null },
+  { creatorId: 'c5', title: 'Dinagyang Display Font', description: 'A hand-lettered display font family inspired by Iloilo’s Dinagyang festival typography, with commercial licensing.', price: 900, productType: 'digital', category: 'Fonts', tags: ['font', 'lettering'], stock: null },
+  { creatorId: 'c6', title: 'Handwoven Cordillera Wall Hanging', description: 'A one-of-a-kind handwoven wall hanging made using traditional Cordillera weaving techniques.', price: 2800, productType: 'physical', category: 'Crafts', tags: ['weaving', 'heritage'], stock: 6 },
+  { creatorId: 'c6', title: 'Pinewood Carved Figure', description: 'A hand-carved pinewood figure inspired by Baguio folklore, made to order by a local artisan.', price: 1600, productType: 'physical', category: 'Crafts', tags: ['woodcraft'], stock: null },
+  { creatorId: 'c7', title: 'Brand Voice Copywriting Templates', description: 'A brand-voice template pack: tone guide, tagline worksheet, and sample copy structures for your top three channels.', price: 1800, productType: 'digital', category: 'Templates', tags: ['copywriting', 'brand voice'], stock: null },
 ];
 
 export const listings: Listing[] = listingSeeds.map((seed, index) => {
@@ -213,6 +243,7 @@ export const listings: Listing[] = listingSeeds.map((seed, index) => {
     coverUrl: cover(`${id}-cover`),
     images: Array.from({ length: imageCount }, (_, i) => cover(`${id}-media-${i + 1}`)),
     price: seed.price,
+    productType: seed.productType,
     category: seed.category,
     tags: seed.tags,
     stock: seed.stock,
