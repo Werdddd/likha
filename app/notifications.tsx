@@ -31,7 +31,7 @@ function timeAgo(iso: string) {
 
 export default function NotificationsScreen() {
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'Notifications' }} />
 
       <FlatList
