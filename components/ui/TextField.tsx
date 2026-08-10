@@ -1,14 +1,15 @@
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 
 import { colors, radius, spacing, type as t } from '../../constants/theme';
 
 interface TextFieldProps extends TextInputProps {
   label: string;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
-export function TextField({ label, style, ...rest }: TextFieldProps) {
+export function TextField({ label, style, containerStyle, ...rest }: TextFieldProps) {
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, containerStyle]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         placeholderTextColor={colors.warmBrown}
