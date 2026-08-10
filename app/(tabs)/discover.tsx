@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FeaturedWorks } from '../../components/FeaturedWorks';
 import { FilterBar } from '../../components/FilterBar';
 import { MasonryGrid } from '../../components/MasonryGrid';
 import { AnimatedPressable } from '../../components/ui';
@@ -19,6 +20,11 @@ export default function DiscoverScreen() {
   const filteredProjects = useMemo(
     () => (discipline ? projects.filter((p) => p.discipline === discipline) : projects),
     [discipline],
+  );
+
+  const featuredProjects = useMemo(
+    () => [...projects].sort((a, b) => b.appreciations - a.appreciations).slice(0, 8),
+    [],
   );
 
   return (
@@ -52,11 +58,20 @@ export default function DiscoverScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.list}>
-        <MasonryGrid
-          projects={filteredProjects}
+        <FeaturedWorks
+          projects={featuredProjects}
           getCreator={getCreatorById}
           onPressProject={(project) => router.push(`/project/${project.id}`)}
         />
+
+        <Text style={styles.sectionTitle}>For You</Text>
+        <View style={styles.gridWrap}>
+          <MasonryGrid
+            projects={filteredProjects}
+            getCreator={getCreatorById}
+            onPressProject={(project) => router.push(`/project/${project.id}`)}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -118,5 +133,14 @@ const styles = StyleSheet.create({
   list: {
     paddingTop: spacing.sm,
     paddingBottom: spacing.xxl + spacing.xxl,
+  },
+  sectionTitle: {
+    ...t.h3,
+    color: colors.ink,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  gridWrap: {
+    paddingHorizontal: spacing.sm,
   },
 });

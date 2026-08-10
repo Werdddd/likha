@@ -1,0 +1,293 @@
+import { Image } from 'expo-image';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
+
+import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
+import type { Creator, Project } from '../types';
+import { AnimatedPressable } from './ui/AnimatedPressable';
+import { Avatar } from './ui/Avatar';
+
+interface FeaturedWorksProps {
+  projects: Project[];
+  getCreator: (id: string) => Creator | undefined;
+  onPressProject?: (project: Project) => void;
+}
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_WIDTH = SCREEN_WIDTH - spacing.md * 2 - spacing.xl;
+const CARD_HEIGHT = 220;
+const CARD_GAP = spacing.sm;
+const PHOTO_INTERVAL = 3000;
+
+export function FeaturedWorks({ projects, getCreator, onPressProject }: FeaturedWorksProps) {
+  const [followed, setFollowed] = useState<Set<string>>(new Set());
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const toggleFollow = useCallback((id: string) => {
+    setFollowed((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const onMomentumScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const index = Math.round(e.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_GAP));
+      setActiveIndex(Math.max(0, Math.min(index, projects.length - 1)));
+    },
+    [projects.length],
+  );
+
+  if (projects.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.title}>Featured Works</Text>
+
+      <FlatList
+        data={projects}
+        keyExtractor={(item) => item.id}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={CARD_WIDTH + CARD_GAP}
+        decelerationRate="fast"
+        snapToAlignment="start"
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        contentContainerStyle={styles.listContent}
+        renderItem={({ item, index }) => {
+          const creator = getCreator(item.creatorId);
+          if (!creator) return null;
+          return (
+            <FeaturedCard
+              project={item}
+              creator={creator}
+              following={followed.has(creator.id)}
+              onToggleFollow={() => toggleFollow(creator.id)}
+              onPress={() => onPressProject?.(item)}
+              total={projects.length}
+              activeIndex={activeIndex}
+              showDots={index === activeIndex}
+            />
+          );
+        }}
+      />
+    </View>
+  );
+}
+
+function useAutoCarousel(photoCount: number, interval = PHOTO_INTERVAL) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    setIndex(0);
+    if (photoCount < 2) return;
+    const id = setInterval(() => {
+      setIndex((prev) => (prev + 1) % photoCount);
+    }, interval);
+    return () => clearInterval(id);
+  }, [photoCount, interval]);
+
+  return index;
+}
+
+interface FeaturedCardProps {
+  project: Project;
+  creator: Creator;
+  following: boolean;
+  onToggleFollow: () => void;
+  onPress?: () => void;
+  total: number;
+  activeIndex: number;
+  showDots: boolean;
+}
+
+function FeaturedCard({
+  project,
+  creator,
+  following,
+  onToggleFollow,
+  onPress,
+  total,
+  activeIndex,
+  showDots,
+}: FeaturedCardProps) {
+  const photos = project.media.length > 0 ? project.media.map((m) => m.url) : [project.coverUrl];
+  const photoIndex = useAutoCarousel(photos.length);
+
+  return (
+    <AnimatedPressable style={styles.card} onPress={onPress} scaleTo={0.98}>
+      <Image
+        source={{ uri: photos[photoIndex] }}
+        style={styles.cardImage}
+        contentFit="cover"
+        transition={450}
+      />
+      <View style={styles.topScrim} />
+      <View style={styles.bottomScrim} />
+
+      <View style={styles.cardTop}>
+        <View style={styles.creatorInfo}>
+          <Avatar uri={creator.avatarUrl} size={32} bordered />
+          <View style={styles.creatorText}>
+            <Text style={styles.creatorName} numberOfLines={1}>
+              {creator.handle}
+            </Text>
+            <Text style={styles.creatorRole} numberOfLines={1}>
+              {project.discipline}
+            </Text>
+          </View>
+        </View>
+
+        <AnimatedPressable style={styles.followButton} onPress={onToggleFollow} scaleTo={0.92}>
+          <Text style={styles.followButtonLabel}>{following ? 'Following' : 'Follow'}</Text>
+        </AnimatedPressable>
+      </View>
+
+      <View style={styles.cardBottom}>
+        <Text style={styles.titleLabel} numberOfLines={2}>
+          {project.title}
+        </Text>
+
+        {showDots && total > 1 && (
+          <View style={styles.dotsPill}>
+            {Array.from({ length: total }).map((_, index) => (
+              <View key={index} style={[styles.dot, index === activeIndex && styles.dotActive]} />
+            ))}
+          </View>
+        )}
+      </View>
+    </AnimatedPressable>
+  );
+}
+
+const textShadow = {
+  textShadowColor: 'rgba(0,0,0,0.45)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 4,
+};
+
+const styles = StyleSheet.create({
+  section: {
+    marginBottom: spacing.md,
+  },
+  title: {
+    ...t.h3,
+    color: colors.ink,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  listContent: {
+    paddingHorizontal: spacing.md,
+  },
+  card: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    backgroundColor: colors.softGray,
+    marginRight: CARD_GAP,
+    ...shadow.md,
+  },
+  cardImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  topScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 72,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  bottomScrim: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 64,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    padding: spacing.sm + 2,
+  },
+  creatorInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  creatorText: {
+    marginLeft: spacing.xs + 2,
+    flex: 1,
+  },
+  creatorName: {
+    ...t.label,
+    color: colors.white,
+  },
+  creatorRole: {
+    ...t.caption,
+    color: colors.white,
+    opacity: 0.85,
+    marginTop: 1,
+  },
+  followButton: {
+    backgroundColor: colors.white,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: 7,
+  },
+  followButtonLabel: {
+    ...t.label,
+    fontSize: 12,
+    color: colors.ink,
+  },
+  cardBottom: {
+    position: 'absolute',
+    left: spacing.sm + 2,
+    right: spacing.sm + 2,
+    bottom: spacing.sm + 2,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  titleLabel: {
+    ...t.bodyMedium,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.white,
+    flexShrink: 1,
+    ...textShadow,
+  },
+  dotsPill: {
+    flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  dotActive: {
+    width: 14,
+    backgroundColor: colors.likhaYellow,
+  },
+});
