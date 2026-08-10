@@ -14,8 +14,6 @@ export default function TabsLayout() {
         tabBar={(props) => <FloatingTabBar {...props} onCreatePress={() => setCreateSheetVisible(true)} />}
       >
         <Tabs.Screen name="discover" options={{ title: 'Home' }} />
-        <Tabs.Screen name="portfolio" options={{ title: 'Portfolio' }} />
-        <Tabs.Screen name="activity" options={{ title: 'Activity' }} />
         <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
       </Tabs>
 

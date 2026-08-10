@@ -54,6 +54,7 @@ export default function RootLayout() {
         <Stack.Screen name="project/[id]/edit" options={{ presentation: 'modal' }} />
         <Stack.Screen name="creator/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="search" />
+        <Stack.Screen name="notifications" />
         <Stack.Screen name="profile-edit" options={{ presentation: 'modal' }} />
       </Stack>
     </GestureHandlerRootView>

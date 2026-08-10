@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, AnimatedPressable } from '../../components/ui';
-import { getCreatorById, getProjectById, notifications } from '../../constants/mock-data';
-import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
-import type { Notification, NotificationKind } from '../../types';
+import { Avatar, AnimatedPressable } from '../components/ui';
+import { getCreatorById, getProjectById, notifications } from '../constants/mock-data';
+import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
+import type { Notification, NotificationKind } from '../types';
 
 const VERB: Record<NotificationKind, string> = {
   appreciation: 'appreciated your project',
@@ -29,12 +29,10 @@ function timeAgo(iso: string) {
   return `${days}d ago`;
 }
 
-export default function ActivityScreen() {
+export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Activity</Text>
-      </View>
+      <Stack.Screen options={{ title: 'Notifications' }} />
 
       <FlatList
         data={notifications}
@@ -85,17 +83,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.canvas,
   },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-  },
-  title: {
-    ...t.h1,
-    color: colors.ink,
-  },
   list: {
     paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xxl + spacing.xxl,
   },
   row: {

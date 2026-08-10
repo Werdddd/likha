@@ -8,12 +8,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FilterBar } from '../../components/FilterBar';
 import { MasonryGrid } from '../../components/MasonryGrid';
 import { AnimatedPressable } from '../../components/ui';
-import { disciplines, getCreatorById, projects } from '../../constants/mock-data';
+import { disciplines, getCreatorById, notifications, projects } from '../../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import type { Discipline } from '../../types';
 
 export default function DiscoverScreen() {
   const [discipline, setDiscipline] = useState<Discipline | null>(null);
+  const hasUnread = useMemo(() => notifications.some((n) => !n.read), []);
 
   const filteredProjects = useMemo(
     () => (discipline ? projects.filter((p) => p.discipline === discipline) : projects),
@@ -29,11 +30,17 @@ export default function DiscoverScreen() {
             style={styles.logo}
             contentFit="cover"
           />
-          <Text style={styles.tagline}>Likha ng Pilipino. Gawa para sa mundo.</Text>
+          {/* <Text style={styles.tagline}>Likha ng Pilipino. Gawa para sa mundo.</Text> */}
         </View>
-        <AnimatedPressable style={styles.searchButton} onPress={() => router.push('/search')} scaleTo={0.92}>
-          <Ionicons name="search" size={20} color={colors.ink} />
-        </AnimatedPressable>
+        <View style={styles.headerActions}>
+          <AnimatedPressable style={styles.iconButton} onPress={() => router.push('/notifications')} scaleTo={0.92}>
+            <Ionicons name="notifications-outline" size={20} color={colors.ink} />
+            {hasUnread && <View style={styles.unreadDot} />}
+          </AnimatedPressable>
+          <AnimatedPressable style={styles.iconButton} onPress={() => router.push('/search')} scaleTo={0.92}>
+            <Ionicons name="search" size={20} color={colors.ink} />
+          </AnimatedPressable>
+        </View>
       </View>
 
       <View style={styles.filterBar}>
@@ -81,7 +88,11 @@ const styles = StyleSheet.create({
     color: colors.warmBrown,
     marginTop: 2,
   },
-  searchButton: {
+  headerActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  iconButton: {
     width: 44,
     height: 44,
     borderRadius: radius.pill,
@@ -89,6 +100,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.white,
     ...shadow.sm,
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.terracotta,
+    borderWidth: 1.5,
+    borderColor: colors.white,
   },
   filterBar: {
     marginBottom: spacing.sm,
