@@ -131,9 +131,6 @@ function FeaturedCard({
         contentFit="cover"
         transition={450}
       />
-      <View style={styles.topScrim} />
-      <View style={styles.bottomScrim} />
-
       <View style={styles.cardTop}>
         <View style={styles.creatorInfo}>
           <Avatar uri={creator.avatarUrl} size={32} bordered />
@@ -200,22 +197,6 @@ const styles = StyleSheet.create({
   cardImage: {
     ...StyleSheet.absoluteFillObject,
   },
-  topScrim: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 72,
-    backgroundColor: 'rgba(0,0,0,0.22)',
-  },
-  bottomScrim: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 64,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-  },
   cardTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -235,12 +216,14 @@ const styles = StyleSheet.create({
   creatorName: {
     ...t.label,
     color: colors.white,
+    ...textShadow,
   },
   creatorRole: {
     ...t.caption,
     color: colors.white,
     opacity: 0.85,
     marginTop: 1,
+    ...textShadow,
   },
   followButton: {
     backgroundColor: colors.white,
