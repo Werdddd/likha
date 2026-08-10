@@ -7,7 +7,7 @@ import { Button, Chip, TextField } from '../components/ui';
 import { disciplines, regions } from '../constants/mock-data';
 import { colors, spacing, type as t } from '../constants/theme';
 import { useSessionStore } from '../store/session-store';
-import type { Discipline, Region } from '../types';
+import type { Discipline, ProfileMode, Region } from '../types';
 
 export default function ProfileEditScreen() {
   const currentUser = useSessionStore((s) => s.currentUser);
@@ -17,9 +17,10 @@ export default function ProfileEditScreen() {
   const [bio, setBio] = useState(currentUser.bio);
   const [region, setRegion] = useState<Region>(currentUser.region);
   const [discipline, setDiscipline] = useState<Discipline>(currentUser.discipline);
+  const [profileMode, setProfileMode] = useState<ProfileMode>(currentUser.profileMode);
 
   const handleSave = () => {
-    updateProfile({ name: name.trim(), bio: bio.trim(), region, discipline });
+    updateProfile({ name: name.trim(), bio: bio.trim(), region, discipline, profileMode });
     router.back();
   };
 
@@ -42,6 +43,20 @@ export default function ProfileEditScreen() {
           {regions.map((r) => (
             <Chip key={r} label={r} selected={region === r} onPress={() => setRegion(r)} />
           ))}
+        </View>
+
+        <Text style={styles.sectionLabel}>Profile visibility</Text>
+        <View style={styles.chipWrap}>
+          <Chip
+            label="Portfolio only"
+            selected={profileMode === 'portfolio'}
+            onPress={() => setProfileMode('portfolio')}
+          />
+          <Chip
+            label="Open for work"
+            selected={profileMode === 'open_for_work'}
+            onPress={() => setProfileMode('open_for_work')}
+          />
         </View>
 
         <Button label="Save Changes" onPress={handleSave} style={styles.saveButton} />

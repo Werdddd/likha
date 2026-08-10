@@ -31,7 +31,6 @@ export interface Creator {
   followerCount: number;
   followingCount: number;
   projectCount: number;
-  responseTime?: string;
   badges: string[];
 }
 

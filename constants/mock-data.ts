@@ -30,7 +30,6 @@ export const creators: Creator[] = [
     followerCount: 3120,
     followingCount: 214,
     projectCount: 18,
-    responseTime: 'Usually responds within a day',
     badges: ['Top Seller', 'Verified ID'],
   },
   {
@@ -47,7 +46,6 @@ export const creators: Creator[] = [
     followerCount: 1893,
     followingCount: 98,
     projectCount: 12,
-    responseTime: 'Usually responds within a few hours',
     badges: ['Fast Responder'],
   },
   {
@@ -80,7 +78,6 @@ export const creators: Creator[] = [
     followerCount: 4520,
     followingCount: 120,
     projectCount: 9,
-    responseTime: 'Usually responds within 2 days',
     badges: ['Top Seller'],
   },
   {
@@ -97,7 +94,6 @@ export const creators: Creator[] = [
     followerCount: 2210,
     followingCount: 176,
     projectCount: 21,
-    responseTime: 'Usually responds within a day',
     badges: ['Verified ID'],
   },
   {
@@ -130,7 +126,6 @@ export const creators: Creator[] = [
     followerCount: 1340,
     followingCount: 260,
     projectCount: 33,
-    responseTime: 'Usually responds within a day',
     badges: ['Fast Responder'],
   },
 ];

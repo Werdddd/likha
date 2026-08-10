@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   hireButton: {
     paddingHorizontal: spacing.md,
