@@ -21,9 +21,6 @@ interface FloatingTabBarProps extends BottomTabBarProps {
 
 export function FloatingTabBar({ state, navigation, onCreatePress }: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
-  const midpoint = Math.ceil(state.routes.length / 2);
-  const leftRoutes = state.routes.slice(0, midpoint);
-  const rightRoutes = state.routes.slice(midpoint);
 
   const renderTab = (route: (typeof state.routes)[number]) => {
     const index = state.routes.indexOf(route);
@@ -42,87 +39,112 @@ export function FloatingTabBar({ state, navigation, onCreatePress }: FloatingTab
       <AnimatedPressable key={route.key} onPress={onPress} style={styles.tabItem} scaleTo={0.88}>
         <Ionicons
           name={isFocused ? icon.active : icon.inactive}
-          size={22}
-          color={isFocused ? colors.ink : colors.warmBrown}
+          size={21}
+          color={isFocused ? colors.likhaYellow : colors.warmBrown}
         />
-        <Text style={[styles.tabLabel, { color: isFocused ? colors.ink : colors.warmBrown }]}>{icon.label}</Text>
+        <Text style={[styles.tabLabel, { color: isFocused ? colors.likhaYellow : colors.warmBrown }]}>
+          {icon.label}
+        </Text>
       </AnimatedPressable>
     );
   };
 
+  const blurMethod = Platform.OS === 'android' ? 'dimezisBlurView' : undefined;
+
   return (
     <View style={[styles.wrapper, { bottom: insets.bottom + spacing.sm }]} pointerEvents="box-none">
-      <BlurView
-        intensity={50}
-        tint="light"
-        experimentalBlurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
-        style={styles.bar}
-      >
-        <View style={styles.barContent}>
-          <View style={styles.side}>{leftRoutes.map(renderTab)}</View>
-          <View style={styles.centerGap} />
-          <View style={styles.side}>{rightRoutes.map(renderTab)}</View>
-        </View>
-      </BlurView>
+      <View style={styles.bar}>
+        <BlurView intensity={70} tint="light" experimentalBlurMethod={blurMethod} style={styles.barBlur} />
+        <View style={styles.barTint} />
+        <View style={styles.barContent}>{state.routes.map(renderTab)}</View>
+      </View>
 
       <AnimatedPressable onPress={onCreatePress} style={styles.createButton} scaleTo={0.9}>
-        <Ionicons name="add" size={28} color={colors.ink} />
+        <BlurView
+          intensity={70}
+          tint="light"
+          experimentalBlurMethod={blurMethod}
+          style={styles.createButtonBlur}
+        />
+        <View style={styles.createButtonTint} />
+        <Ionicons name="add" size={26} color={colors.ink} />
       </AnimatedPressable>
     </View>
   );
 }
+
+const BAR_HEIGHT = 58;
 
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
     left: spacing.lg,
     right: spacing.lg,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   bar: {
-    width: '100%',
+    flex: 1,
+    height: BAR_HEIGHT,
     borderRadius: radius.pill,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.white + '80',
-    backgroundColor: colors.canvas + 'B3',
-    ...shadow.md,
+    borderTopColor: colors.white + 'CC',
+    borderLeftColor: colors.white + 'CC',
+    borderRightColor: colors.white + '40',
+    borderBottomColor: colors.white + '40',
+    ...shadow.lg,
+  },
+  barBlur: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.pill,
+  },
+  barTint: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.pill,
+    backgroundColor: colors.white + '3D',
   },
   barContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-  },
-  side: {
     flex: 1,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-around',
-  },
-  centerGap: {
-    width: 56,
+    paddingHorizontal: spacing.sm,
   },
   tabItem: {
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 2,
     paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
   },
   tabLabel: {
     ...t.caption,
     fontSize: 10,
   },
   createButton: {
-    position: 'absolute',
-    top: -22,
-    width: 58,
-    height: 58,
-    borderRadius: radius.pill,
-    backgroundColor: colors.likhaYellow,
+    width: BAR_HEIGHT,
+    height: BAR_HEIGHT,
+    borderRadius: BAR_HEIGHT / 2,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: colors.canvas,
+    borderWidth: 1,
+    borderTopColor: colors.white + 'CC',
+    borderLeftColor: colors.white + 'CC',
+    borderRightColor: colors.white + '40',
+    borderBottomColor: colors.white + '40',
     ...shadow.lg,
+  },
+  createButtonBlur: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: BAR_HEIGHT / 2,
+  },
+  createButtonTint: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: BAR_HEIGHT / 2,
+    backgroundColor: colors.likhaYellow + 'B3',
   },
 });
