@@ -1,11 +1,13 @@
 import { Stack, router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ProjectCard } from '../components/ProjectCard';
-import { TextField } from '../components/ui';
+import { CreatorCard } from '../components/CreatorCard';
 import { FilterBar } from '../components/FilterBar';
-import { disciplines, getCreatorById, projects, regions } from '../constants/mock-data';
+import { MasonryGrid } from '../components/MasonryGrid';
+import { TextField } from '../components/ui';
+import { creators, disciplines, getCreatorById, projects, regions } from '../constants/mock-data';
 import { colors, spacing, type as t } from '../constants/theme';
 import type { Discipline, Region } from '../types';
 
@@ -14,8 +16,9 @@ export default function SearchScreen() {
   const [discipline, setDiscipline] = useState<Discipline | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
 
+  const normalizedQuery = query.trim().toLowerCase();
+
   const results = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
     return projects.filter((project) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
@@ -25,7 +28,18 @@ export default function SearchScreen() {
       const matchesRegion = !region || project.region === region;
       return matchesQuery && matchesDiscipline && matchesRegion;
     });
-  }, [query, discipline, region]);
+  }, [normalizedQuery, discipline, region]);
+
+  const matchedCreators = useMemo(() => {
+    if (normalizedQuery.length === 0) return [];
+    return creators.filter(
+      (creator) =>
+        (creator.name.toLowerCase().includes(normalizedQuery) ||
+          creator.handle.toLowerCase().includes(normalizedQuery)) &&
+        (!discipline || creator.discipline === discipline) &&
+        (!region || creator.region === region),
+    );
+  }, [normalizedQuery, discipline, region]);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -33,7 +47,7 @@ export default function SearchScreen() {
       <View style={styles.searchWrapper}>
         <TextField
           label=""
-          placeholder="Search projects, tags, mediums..."
+          placeholder="Search projects, creators, tags..."
           value={query}
           onChangeText={setQuery}
           autoFocus
@@ -46,27 +60,23 @@ export default function SearchScreen() {
       <Text style={styles.filterLabel}>Region</Text>
       <FilterBar options={regions} selected={region} onSelect={(v) => setRegion(v as Region | null)} />
 
-      <FlatList
-        data={results}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.column}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.cardWrapper}>
-            <ProjectCard
-              project={item}
-              creator={getCreatorById(item.creatorId)}
-              onPress={() => router.push(`/project/${item.id}`)}
-            />
+      <ScrollView contentContainerStyle={styles.list}>
+        {matchedCreators.length > 0 && (
+          <View style={styles.creatorsSection}>
+            <Text style={styles.sectionTitle}>Creators</Text>
+            {matchedCreators.map((creator) => (
+              <CreatorCard key={creator.id} creator={creator} onPress={() => router.push(`/creator/${creator.id}`)} />
+            ))}
           </View>
         )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>No results. Try a different search or filter.</Text>
-          </View>
-        }
-      />
+
+        <MasonryGrid
+          projects={results}
+          getCreator={getCreatorById}
+          onPressProject={(project) => router.push(`/project/${project.id}`)}
+          emptyLabel="No results. Try a different search or filter."
+        />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -86,24 +96,16 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   list: {
-    paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.xl,
     paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
   },
-  column: {
-    gap: spacing.sm,
+  creatorsSection: {
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
   },
-  cardWrapper: {
-    flex: 1,
-    paddingHorizontal: spacing.xs,
-  },
-  empty: {
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    ...t.body,
-    color: colors.warmBrown,
-    textAlign: 'center',
+  sectionTitle: {
+    ...t.h3,
+    color: colors.ink,
+    marginBottom: spacing.sm,
   },
 });

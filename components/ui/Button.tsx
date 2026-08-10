@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, radius, spacing, type as t } from '../../constants/theme';
+import { AnimatedPressable } from './AnimatedPressable';
 
 type Variant = 'primary' | 'secondary' | 'ghost';
 
@@ -14,21 +15,16 @@ interface ButtonProps {
 
 export function Button({ label, onPress, variant = 'primary', disabled, style }: ButtonProps) {
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.base,
-        variantStyles[variant],
-        pressed && !disabled && styles.pressed,
-        disabled && styles.disabled,
-        style,
-      ]}
+      scaleTo={0.96}
+      style={[styles.base, variantStyles[variant], disabled && styles.disabled, style]}
     >
       <Text style={[styles.label, variant === 'primary' ? styles.labelOnYellow : styles.labelOnLight]}>
         {label}
       </Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -39,9 +35,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.85,
   },
   disabled: {
     opacity: 0.4,

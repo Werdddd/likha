@@ -1,18 +1,64 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar } from '../../components/ui';
+import { AnimatedPressable, Avatar } from '../../components/ui';
 import { getCreatorById, getProjectById } from '../../constants/mock-data';
-import { colors, radius, spacing, type as t } from '../../constants/theme';
+import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 
 export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const project = getProjectById(id);
   const creator = project ? getCreatorById(project.creatorId) : undefined;
   const [appreciated, setAppreciated] = useState(false);
+  const [page, setPage] = useState(0);
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  const heroOpacity = useSharedValue(0);
+  const heroScale = useSharedValue(0.96);
+  const heartScale = useSharedValue(1);
+
+  useEffect(() => {
+    heroOpacity.value = withTiming(1, { duration: 320 });
+    heroScale.value = withTiming(1, { duration: 320 });
+  }, []);
+
+  const heroStyle = useAnimatedStyle(() => ({
+    opacity: heroOpacity.value,
+    transform: [{ scale: heroScale.value }],
+  }));
+
+  const heartStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+  }));
+
+  const toggleAppreciate = () => {
+    setAppreciated((v) => !v);
+    heartScale.value = withSequence(withSpring(1.3, { duration: 150 }), withSpring(1, { duration: 150 }));
+  };
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setPage(Math.round(e.nativeEvent.contentOffset.x / width));
+  };
 
   if (!project) {
     return (
@@ -25,26 +71,47 @@ export default function ProjectDetailScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <Stack.Screen options={{ title: '', headerTransparent: true, headerTintColor: colors.ink }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView>
-        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-          {project.media.map((media) => (
-            <Image key={media.id} source={{ uri: media.url }} style={styles.mediaImage} contentFit="cover" />
-          ))}
-        </ScrollView>
+        <Animated.View style={heroStyle}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+          >
+            {project.media.map((media) => (
+              <Image
+                key={media.id}
+                source={{ uri: media.url }}
+                style={{ width, height: width }}
+                contentFit="cover"
+              />
+            ))}
+          </ScrollView>
+
+          {project.media.length > 1 && (
+            <View style={styles.dots}>
+              {project.media.map((media, index) => (
+                <View key={media.id} style={[styles.dot, index === page && styles.dotActive]} />
+              ))}
+            </View>
+          )}
+        </Animated.View>
 
         <View style={styles.content}>
           <Text style={styles.title}>{project.title}</Text>
 
           {creator && (
             <Link href={`/creator/${creator.id}`} asChild>
-              <Pressable style={styles.creatorRow}>
-                <Avatar uri={creator.avatarUrl} size={36} />
+              <AnimatedPressable style={styles.creatorRow} scaleTo={0.98}>
+                <Avatar uri={creator.avatarUrl} size={36} bordered />
                 <View style={{ marginLeft: spacing.sm }}>
                   <Text style={styles.creatorName}>{creator.name}</Text>
                   <Text style={styles.creatorMeta}>{project.region}</Text>
                 </View>
-              </Pressable>
+              </AnimatedPressable>
             </Link>
           )}
 
@@ -60,16 +127,18 @@ export default function ProjectDetailScreen() {
           </View>
 
           <View style={styles.actionsRow}>
-            <Pressable style={styles.appreciateButton} onPress={() => setAppreciated((v) => !v)}>
-              <Ionicons
-                name={appreciated ? 'heart' : 'heart-outline'}
-                size={18}
-                color={appreciated ? colors.terracotta : colors.ink}
-              />
+            <AnimatedPressable style={styles.appreciateButton} onPress={toggleAppreciate} scaleTo={0.9}>
+              <Animated.View style={heartStyle}>
+                <Ionicons
+                  name={appreciated ? 'heart' : 'heart-outline'}
+                  size={19}
+                  color={appreciated ? colors.terracotta : colors.ink}
+                />
+              </Animated.View>
               <Text style={styles.appreciateLabel}>
                 {project.appreciations + (appreciated ? 1 : 0)} Appreciations
               </Text>
-            </Pressable>
+            </AnimatedPressable>
             <View style={styles.appreciateButton}>
               <Ionicons name="chatbubble-outline" size={16} color={colors.ink} />
               <Text style={styles.appreciateLabel}>{project.commentCount} Comments</Text>
@@ -77,6 +146,14 @@ export default function ProjectDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <AnimatedPressable
+        style={[styles.backButton, { top: insets.top + spacing.sm }]}
+        onPress={() => router.back()}
+        scaleTo={0.9}
+      >
+        <Ionicons name="chevron-back" size={20} color={colors.ink} />
+      </AnimatedPressable>
     </SafeAreaView>
   );
 }
@@ -86,10 +163,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.canvas,
   },
-  mediaImage: {
-    width: 400,
-    height: 320,
-    backgroundColor: colors.softGray,
+  dots: {
+    position: 'absolute',
+    bottom: spacing.md,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.white + '80',
+  },
+  dotActive: {
+    backgroundColor: colors.white,
+    width: 16,
   },
   content: {
     padding: spacing.lg,
@@ -124,8 +215,9 @@ const styles = StyleSheet.create({
   },
   tag: {
     ...t.caption,
-    color: colors.warmBrown,
-    backgroundColor: colors.softGray,
+    color: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.softGray,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
@@ -143,6 +235,17 @@ const styles = StyleSheet.create({
   appreciateLabel: {
     ...t.bodyMedium,
     color: colors.ink,
+  },
+  backButton: {
+    position: 'absolute',
+    left: spacing.md,
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    backgroundColor: colors.canvas + 'CC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.sm,
   },
   body: {
     ...t.body,

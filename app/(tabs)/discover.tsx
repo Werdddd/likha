@@ -1,12 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FilterBar } from '../../components/FilterBar';
-import { ProjectCard } from '../../components/ProjectCard';
+import { MasonryGrid } from '../../components/MasonryGrid';
+import { AnimatedPressable } from '../../components/ui';
 import { disciplines, getCreatorById, projects } from '../../constants/mock-data';
-import { colors, radius, spacing, type as t } from '../../constants/theme';
+import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import type { Discipline } from '../../types';
 
 export default function DiscoverScreen() {
@@ -20,35 +23,34 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.title}>Discover</Text>
-        <Pressable style={styles.searchBar} onPress={() => router.push('/search')}>
-          <Ionicons name="search" size={18} color={colors.warmBrown} />
-          <Text style={styles.searchPlaceholder}>Search projects, creators, tags...</Text>
-        </Pressable>
+        <View style={styles.brand}>
+          <Image
+            source={require('../../assets/likha-logo.png')}
+            style={styles.logo}
+            contentFit="cover"
+          />
+          <Text style={styles.tagline}>Likha ng Pilipino. Gawa para sa mundo.</Text>
+        </View>
+        <AnimatedPressable style={styles.searchButton} onPress={() => router.push('/search')} scaleTo={0.92}>
+          <Ionicons name="search" size={20} color={colors.ink} />
+        </AnimatedPressable>
       </View>
 
-      <FilterBar
-        options={disciplines}
-        selected={discipline}
-        onSelect={(value) => setDiscipline(value as Discipline | null)}
-      />
+      <View style={styles.filterBar}>
+        <FilterBar
+          options={disciplines}
+          selected={discipline}
+          onSelect={(value) => setDiscipline(value as Discipline | null)}
+        />
+      </View>
 
-      <FlatList
-        data={filteredProjects}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.column}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.cardWrapper}>
-            <ProjectCard
-              project={item}
-              creator={getCreatorById(item.creatorId)}
-              onPress={() => router.push(`/project/${item.id}`)}
-            />
-          </View>
-        )}
-      />
+      <ScrollView contentContainerStyle={styles.list}>
+        <MasonryGrid
+          projects={filteredProjects}
+          getCreator={getCreatorById}
+          onPressProject={(project) => router.push(`/project/${project.id}`)}
+        />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -59,38 +61,40 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
-  title: {
-    ...t.h1,
-    color: colors.ink,
+  brand: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  logo: {
+    width: 101,
+    height: 44,
+    marginLeft: -spacing.sm,
+  },
+  tagline: {
+    ...t.caption,
+    color: colors.warmBrown,
+    marginTop: 2,
+  },
+  searchButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    ...shadow.sm,
+  },
+  filterBar: {
     marginBottom: spacing.sm,
   },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.softGray,
-    gap: spacing.xs,
-  },
-  searchPlaceholder: {
-    ...t.body,
-    color: colors.warmBrown,
-  },
   list: {
-    paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.xl,
-  },
-  column: {
-    gap: spacing.sm,
-  },
-  cardWrapper: {
-    flex: 1,
-    paddingHorizontal: spacing.xs,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl + spacing.xxl,
   },
 });

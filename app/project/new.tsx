@@ -1,5 +1,6 @@
 import { router, Stack } from 'expo-router';
-import { SafeAreaView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProjectForm } from '../../components/ProjectForm';
 import { colors } from '../../constants/theme';

@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '../../components/ui';
-import { colors, radius, spacing, type as t } from '../../constants/theme';
+import { AnimatedPressable, Button } from '../../components/ui';
+import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { useSessionStore } from '../../store/session-store';
 import type { ProfileMode } from '../../types';
 
@@ -32,14 +33,15 @@ export default function OnboardingModeScreen() {
         {options.map((option) => {
           const selected = profileMode === option.mode;
           return (
-            <Pressable
+            <AnimatedPressable
               key={option.mode}
               onPress={() => setProfileMode(option.mode)}
+              scaleTo={0.98}
               style={[styles.card, selected && styles.cardSelected]}
             >
               <Text style={[styles.cardTitle, selected && styles.cardTitleSelected]}>{option.title}</Text>
               <Text style={styles.cardDescription}>{option.description}</Text>
-            </Pressable>
+            </AnimatedPressable>
           );
         })}
 
@@ -73,16 +75,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   card: {
-    borderWidth: 1.5,
-    borderColor: colors.softGray,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,
     backgroundColor: colors.white,
+    ...shadow.sm,
   },
   cardSelected: {
-    borderColor: colors.likhaYellow,
     backgroundColor: '#FFFCF2',
+    borderWidth: 1.5,
+    borderColor: colors.likhaYellow,
   },
   cardTitle: {
     ...t.h3,

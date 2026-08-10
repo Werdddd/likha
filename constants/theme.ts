@@ -1,5 +1,5 @@
 export const colors = {
-  canvas: '#FFF9EA',
+  canvas: '#FFFFFF',
   ink: '#20201C',
   likhaYellow: '#F4C542',
   golden: '#E5A91A',
@@ -24,7 +24,7 @@ export const type = {
   h3: { fontFamily: fonts.bodySemiBold, fontSize: 18, lineHeight: 24 },
   body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
   bodyMedium: { fontFamily: fonts.bodyMedium, fontSize: 15, lineHeight: 22 },
-  label: { fontFamily: fonts.bodySemiBold, fontSize: 13, lineHeight: 18 },
+  label: { fontFamily: fonts.bodySemiBold, fontSize: 13, lineHeight: 20 },
   caption: { fontFamily: fonts.body, fontSize: 12, lineHeight: 16 },
   button: { fontFamily: fonts.bodyBold, fontSize: 15, lineHeight: 20 },
 } as const;
@@ -43,4 +43,28 @@ export const radius = {
   md: 14,
   lg: 20,
   pill: 999,
+} as const;
+
+export const shadow = {
+  sm: {
+    shadowColor: colors.ink,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  lg: {
+    shadowColor: colors.ink,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
+  },
 } as const;

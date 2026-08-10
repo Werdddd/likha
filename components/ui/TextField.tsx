@@ -9,7 +9,7 @@ interface TextFieldProps extends TextInputProps {
 export function TextField({ label, style, ...rest }: TextFieldProps) {
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         placeholderTextColor={colors.warmBrown}
         style={[styles.input, style]}
@@ -31,9 +31,7 @@ const styles = StyleSheet.create({
   input: {
     ...t.body,
     color: colors.ink,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.softGray,
+    backgroundColor: colors.softGray + '4d',
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,

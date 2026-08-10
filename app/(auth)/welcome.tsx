@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '../../components/ui';
-import { colors, spacing, type as t } from '../../constants/theme';
+import { colors, radius, spacing, type as t } from '../../constants/theme';
 
 export default function WelcomeScreen() {
   return (
@@ -39,17 +40,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.canvas,
   },
   hero: {
-    height: '48%',
+    height: '50%',
     backgroundColor: colors.softGray,
   },
   heroImage: {
     width: '100%',
     height: '100%',
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
   },
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
   },
   wordmark: {
     ...t.display,

@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { colors, radius, spacing, type as t } from '../../constants/theme';
+import { AnimatedPressable } from './AnimatedPressable';
 
 interface ChipProps {
   label: string;
@@ -10,29 +11,32 @@ interface ChipProps {
 
 export function Chip({ label, selected, onPress }: ChipProps) {
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
+      scaleTo={0.95}
       style={[styles.chip, selected && styles.chipSelected]}
     >
-      <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
-    </Pressable>
+      <Text style={[styles.label, selected && styles.labelSelected]} numberOfLines={1}>
+        {label}
+      </Text>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   chip: {
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 36,
     paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.softGray,
+    backgroundColor: colors.softGray + '80',
     marginRight: spacing.sm,
-    marginBottom: spacing.sm,
   },
   chipSelected: {
     backgroundColor: colors.ink,
-    borderColor: colors.ink,
   },
   label: {
     ...t.label,

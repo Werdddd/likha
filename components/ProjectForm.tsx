@@ -1,11 +1,12 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { disciplines } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
 import type { Discipline } from '../types';
-import { Button, Chip, TextField } from './ui';
+import { AnimatedPressable, Button, Chip, TextField } from './ui';
 
 export interface ProjectFormValues {
   title: string;
@@ -43,12 +44,14 @@ export function ProjectForm({ initialValues, submitLabel, onSubmit }: ProjectFor
             contentFit="cover"
           />
         ))}
-        <Pressable
+        <AnimatedPressable
           style={styles.addMedia}
+          scaleTo={0.95}
           onPress={() => setMediaSeeds((prev) => [...prev, `pf-media-${prev.length + 1}-${Date.now()}`])}
         >
-          <Text style={styles.addMediaLabel}>+ Add</Text>
-        </Pressable>
+          <Ionicons name="add" size={22} color={colors.warmBrown} />
+          <Text style={styles.addMediaLabel}>Add</Text>
+        </AnimatedPressable>
       </View>
 
       <TextField label="Title" placeholder="Project title" value={title} onChangeText={setTitle} />
@@ -109,11 +112,10 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.softGray,
-    borderStyle: 'dashed',
+    backgroundColor: colors.softGray + '4d',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 2,
   },
   addMediaLabel: {
     ...t.label,

@@ -1,46 +1,25 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useState } from 'react';
 
-import { colors, fonts } from '../../constants/theme';
+import { CreateSheet } from '../../components/nav/CreateSheet';
+import { FloatingTabBar } from '../../components/nav/FloatingTabBar';
 
 export default function TabsLayout() {
+  const [createSheetVisible, setCreateSheetVisible] = useState(false);
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.ink,
-        tabBarInactiveTintColor: colors.warmBrown,
-        tabBarStyle: {
-          backgroundColor: colors.canvas,
-          borderTopColor: colors.softGray,
-        },
-        tabBarLabelStyle: {
-          fontFamily: fonts.bodyMedium,
-          fontSize: 11,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="discover"
-        options={{
-          title: 'Discover',
-          tabBarIcon: ({ color, size }) => <Ionicons name="compass-outline" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="portfolio"
-        options={{
-          title: 'My Work',
-          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} />,
-        }}
-      />
-    </Tabs>
+    <>
+      <Tabs
+        screenOptions={{ headerShown: false }}
+        tabBar={(props) => <FloatingTabBar {...props} onCreatePress={() => setCreateSheetVisible(true)} />}
+      >
+        <Tabs.Screen name="discover" options={{ title: 'Home' }} />
+        <Tabs.Screen name="portfolio" options={{ title: 'Portfolio' }} />
+        <Tabs.Screen name="activity" options={{ title: 'Activity' }} />
+        <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+      </Tabs>
+
+      <CreateSheet visible={createSheetVisible} onClose={() => setCreateSheetVisible(false)} />
+    </>
   );
 }

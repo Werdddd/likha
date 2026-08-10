@@ -13,6 +13,7 @@ export function FilterBar({ options, selected, onSelect }: FilterBarProps) {
   return (
     <ScrollView
       horizontal
+      style={styles.scroll}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.content}
     >
@@ -30,7 +31,11 @@ export function FilterBar({ options, selected, onSelect }: FilterBarProps) {
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    flexGrow: 0,
+  },
   content: {
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

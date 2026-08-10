@@ -62,3 +62,14 @@ export interface FilterState {
   discipline: Discipline | null;
   region: Region | null;
 }
+
+export type NotificationKind = 'appreciation' | 'follow' | 'comment';
+
+export interface Notification {
+  id: string;
+  kind: NotificationKind;
+  creatorId: string;
+  projectId?: string;
+  createdAt: string;
+  read: boolean;
+}

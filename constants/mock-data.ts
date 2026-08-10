@@ -1,4 +1,4 @@
-import type { Creator, Discipline, Project, Region } from '../types';
+import type { Creator, Discipline, Notification, Project, Region } from '../types';
 
 export const disciplines: Discipline[] = [
   'Illustration',
@@ -195,3 +195,12 @@ export const getProjectsByCreator = (creatorId: string): Project[] =>
   projects.filter((p) => p.creatorId === creatorId);
 
 export const currentUser: Creator = creators[0];
+
+export const notifications: Notification[] = [
+  { id: 'n1', kind: 'appreciation', creatorId: 'c2', projectId: 'p1', createdAt: new Date(2026, 7, 9, 8, 15).toISOString(), read: false },
+  { id: 'n2', kind: 'follow', creatorId: 'c5', createdAt: new Date(2026, 7, 8, 19, 40).toISOString(), read: false },
+  { id: 'n3', kind: 'comment', creatorId: 'c3', projectId: 'p2', createdAt: new Date(2026, 7, 8, 12, 5).toISOString(), read: false },
+  { id: 'n4', kind: 'appreciation', creatorId: 'c4', projectId: 'p1', createdAt: new Date(2026, 7, 7, 21, 30).toISOString(), read: true },
+  { id: 'n5', kind: 'follow', creatorId: 'c7', createdAt: new Date(2026, 7, 6, 9, 0).toISOString(), read: true },
+  { id: 'n6', kind: 'comment', creatorId: 'c6', projectId: 'p3', createdAt: new Date(2026, 7, 4, 16, 20).toISOString(), read: true },
+];

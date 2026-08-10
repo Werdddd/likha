@@ -1,8 +1,12 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing, type as t } from '../constants/theme';
+import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
+import { pseudoRatioForId } from '../lib/masonry';
 import type { Creator, Project } from '../types';
+import { AnimatedPressable } from './ui/AnimatedPressable';
+import { Avatar } from './ui/Avatar';
 
 interface ProjectCardProps {
   project: Project;
@@ -10,48 +14,94 @@ interface ProjectCardProps {
   onPress?: () => void;
 }
 
+const textShadow = {
+  textShadowColor: 'rgba(0,0,0,0.45)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 4,
+};
+
 export function ProjectCard({ project, creator, onPress }: ProjectCardProps) {
+  const ratio = pseudoRatioForId(project.id);
+
   return (
-    <Pressable onPress={onPress} style={styles.card}>
-      <Image source={{ uri: project.coverUrl }} style={styles.cover} contentFit="cover" />
-      <View style={styles.body}>
-        <Text style={styles.title} numberOfLines={1}>
+    <AnimatedPressable onPress={onPress} style={styles.card} scaleTo={0.97}>
+      <Image source={{ uri: project.coverUrl }} style={[styles.cover, { aspectRatio: ratio }]} contentFit="cover" />
+
+      <View style={styles.topContent}>
+        {creator && (
+          <View style={styles.creatorRow}>
+            <Avatar uri={creator.avatarUrl} size={22} bordered />
+            <Text style={styles.creatorName} numberOfLines={1}>
+              {creator.name}
+            </Text>
+          </View>
+        )}
+        <Text style={styles.title} numberOfLines={2}>
           {project.title}
         </Text>
-        {creator && (
-          <Text style={styles.creator} numberOfLines={1}>
-            {creator.name} · {project.region}
-          </Text>
-        )}
       </View>
-    </Pressable>
+
+      <View style={styles.reactionBadge}>
+        <Ionicons name="heart" size={11} color={colors.terracotta} />
+        <Text style={styles.reactionCount}>{project.appreciations}</Text>
+      </View>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
+    backgroundColor: colors.softGray,
+    ...shadow.sm,
   },
   cover: {
     width: '100%',
-    aspectRatio: 1,
     backgroundColor: colors.softGray,
   },
-  body: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+  topContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.sm,
+    gap: 4,
+  },
+  creatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  creatorName: {
+    ...t.caption,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.white,
+    ...textShadow,
   },
   title: {
     ...t.bodyMedium,
-    color: colors.ink,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.white,
+    ...textShadow,
   },
-  creator: {
+  reactionBadge: {
+    position: 'absolute',
+    bottom: spacing.xs + 2,
+    right: spacing.xs + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.white + 'E6',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: 4,
+    ...shadow.sm,
+  },
+  reactionCount: {
     ...t.caption,
-    color: colors.warmBrown,
-    marginTop: 2,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.ink,
   },
 });

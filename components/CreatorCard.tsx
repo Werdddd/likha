@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, spacing, type as t } from '../constants/theme';
+import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import type { Creator } from '../types';
+import { AnimatedPressable } from './ui/AnimatedPressable';
 import { Avatar } from './ui/Avatar';
 
 interface CreatorCardProps {
@@ -11,8 +12,8 @@ interface CreatorCardProps {
 
 export function CreatorCard({ creator, onPress }: CreatorCardProps) {
   return (
-    <Pressable onPress={onPress} style={styles.card}>
-      <Avatar uri={creator.avatarUrl} size={56} />
+    <AnimatedPressable onPress={onPress} style={styles.card} scaleTo={0.97}>
+      <Avatar uri={creator.avatarUrl} size={56} bordered />
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>
           {creator.name}
@@ -26,7 +27,7 @@ export function CreatorCard({ creator, onPress }: CreatorCardProps) {
           <Text style={styles.badgeLabel}>Open for work</Text>
         </View>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -37,8 +38,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.white,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     marginBottom: spacing.sm,
+    ...shadow.sm,
   },
   info: {
     flex: 1,
