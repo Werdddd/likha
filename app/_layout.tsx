@@ -43,6 +43,7 @@ export default function RootLayout() {
           headerStyle: { backgroundColor: colors.canvas },
           headerTintColor: colors.ink,
           headerTitleStyle: { fontFamily: fonts.bodySemiBold },
+          headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: colors.canvas },
         }}
       >

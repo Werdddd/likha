@@ -3,7 +3,7 @@ import { router, Stack } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedPressable } from '../components/ui';
+import { Avatar, AnimatedPressable } from '../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { useSessionStore } from '../store/session-store';
 
@@ -33,10 +33,11 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'Settings' }} />
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.profileRow}>
+        <View style={styles.profileCard}>
+          <Avatar uri={currentUser.avatarUrl} size={52} bordered />
           <View style={styles.profileText}>
             <Text style={styles.profileName}>{currentUser.name}</Text>
             <Text style={styles.profileHandle}>@{currentUser.handle}</Text>
@@ -44,7 +45,7 @@ export default function SettingsScreen() {
         </View>
 
         <SettingsSection title="Account" rows={accountRows} />
-        <SettingsSection rows={sessionRows} />
+        <SettingsSection title="Session" rows={sessionRows} />
 
         <Text style={styles.version}>Likha · v1.0.0</Text>
       </ScrollView>
@@ -64,12 +65,13 @@ function SettingsSection({ title, rows }: { title?: string; rows: SettingsRow[] 
             onPress={row.onPress}
             scaleTo={0.98}
           >
-            <Ionicons
-              name={row.icon}
-              size={19}
-              color={row.destructive ? colors.terracotta : colors.ink}
-              style={styles.rowIcon}
-            />
+            <View style={[styles.rowIconWrap, row.destructive && styles.rowIconWrapDestructive]}>
+              <Ionicons
+                name={row.icon}
+                size={17}
+                color={row.destructive ? colors.terracotta : colors.ink}
+              />
+            </View>
             <Text style={[styles.rowLabel, row.destructive && styles.rowLabelDestructive]}>{row.label}</Text>
             {!row.destructive && <Ionicons name="chevron-forward" size={16} color={colors.warmBrown} />}
           </AnimatedPressable>
@@ -88,11 +90,18 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
   },
-  profileRow: {
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    padding: spacing.md,
     marginBottom: spacing.lg,
+    ...shadow.sm,
   },
   profileText: {
     gap: 2,
+    marginLeft: spacing.md,
   },
   profileName: {
     ...t.h3,
@@ -118,15 +127,24 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.md,
   },
   rowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.softGray,
   },
-  rowIcon: {
+  rowIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    backgroundColor: colors.softGray + '80',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: spacing.md,
+  },
+  rowIconWrapDestructive: {
+    backgroundColor: colors.terracotta + '1a',
   },
   rowLabel: {
     ...t.body,

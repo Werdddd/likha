@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Chip, TextField } from '../../components/ui';
+import { Button, Chip, MultiSelectField, TextField } from '../../components/ui';
 import { disciplines, regions } from '../../constants/mock-data';
 import { colors, spacing, type as t } from '../../constants/theme';
 import { useSessionStore } from '../../store/session-store';
@@ -13,10 +13,10 @@ export default function OnboardingProfileScreen() {
   const completeOnboarding = useSessionStore((s) => s.completeOnboarding);
   const [bio, setBio] = useState('');
   const [region, setRegion] = useState<Region>('Manila');
-  const [discipline, setDiscipline] = useState<Discipline>('Illustration');
+  const [selectedDisciplines, setSelectedDisciplines] = useState<Discipline[]>(['Illustration']);
 
   const handleFinish = () => {
-    completeOnboarding({ bio: bio.trim(), region, discipline, tags: [] });
+    completeOnboarding({ bio: bio.trim(), region, disciplines: selectedDisciplines, tags: [] });
     router.replace('/(tabs)/discover');
   };
 
@@ -35,12 +35,15 @@ export default function OnboardingProfileScreen() {
           onChangeText={setBio}
         />
 
-        <Text style={styles.sectionLabel}>Discipline</Text>
-        <View style={styles.chipWrap}>
-          {disciplines.map((d) => (
-            <Chip key={d} label={d} selected={discipline === d} onPress={() => setDiscipline(d)} />
-          ))}
-        </View>
+        <MultiSelectField
+          label="Disciplines"
+          values={selectedDisciplines}
+          options={disciplines}
+          onChange={(v) => setSelectedDisciplines(v as Discipline[])}
+          max={3}
+          icon="layers-outline"
+          searchPlaceholder="Search disciplines"
+        />
 
         <Text style={styles.sectionLabel}>Region</Text>
         <View style={styles.chipWrap}>
@@ -49,7 +52,12 @@ export default function OnboardingProfileScreen() {
           ))}
         </View>
 
-        <Button label="Finish Setup" onPress={handleFinish} style={styles.finishButton} />
+        <Button
+          label="Finish Setup"
+          onPress={handleFinish}
+          disabled={selectedDisciplines.length === 0}
+          style={styles.finishButton}
+        />
       </ScrollView>
     </SafeAreaView>
   );

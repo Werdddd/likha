@@ -43,9 +43,11 @@ export function ProfileHeader({ creator, actions }: ProfileHeaderProps) {
         </Text>
 
         <View style={styles.pillRow}>
-          <View style={styles.disciplinePill}>
-            <Text style={styles.disciplinePillText}>{creator.discipline}</Text>
-          </View>
+          {creator.disciplines.map((discipline) => (
+            <View key={discipline} style={styles.disciplinePill}>
+              <Text style={styles.disciplinePillText}>{discipline}</Text>
+            </View>
+          ))}
           {creator.profileMode === 'open_for_work' && (
             <View style={styles.openPill}>
               <View style={styles.openDot} />

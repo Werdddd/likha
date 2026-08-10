@@ -36,7 +36,7 @@ export default function SearchScreen() {
       (creator) =>
         (creator.name.toLowerCase().includes(normalizedQuery) ||
           creator.handle.toLowerCase().includes(normalizedQuery)) &&
-        (!discipline || creator.discipline === discipline) &&
+        (!discipline || creator.disciplines.includes(discipline)) &&
         (!region || creator.region === region),
     );
   }, [normalizedQuery, discipline, region]);

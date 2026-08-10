@@ -25,7 +25,7 @@ export interface Creator {
   coverUrl: string;
   bio: string;
   region: Region;
-  discipline: Discipline;
+  disciplines: Discipline[];
   profileMode: ProfileMode;
   tags: string[];
   followerCount: number;
