@@ -9,7 +9,7 @@ import { CreatorCard } from '../components/CreatorCard';
 import { MasonryGrid } from '../components/MasonryGrid';
 import { SearchFilterSheet } from '../components/SearchFilterSheet';
 import { AnimatedPressable, TextField } from '../components/ui';
-import { creators, disciplines, getCreatorById, projects, regions } from '../constants/mock-data';
+import { creators, disciplines, getCreatorById, getListingByProjectId, projects, regions } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
 import type { Discipline, Project, Region } from '../types';
 
@@ -113,6 +113,7 @@ export default function SearchScreen() {
             <MasonryGrid
               projects={results}
               getCreator={getCreatorById}
+              getListing={getListingByProjectId}
               onPressProject={goToProject}
               emptyLabel="No results. Try a different search or filter."
             />

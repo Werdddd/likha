@@ -1,4 +1,4 @@
-import type { Creator, Discipline, Notification, Project, Region } from '../types';
+import type { Creator, Discipline, Listing, Notification, Project, Region } from '../types';
 
 export const disciplines: Discipline[] = [
   'Illustration',
@@ -180,6 +180,46 @@ export const projects: Project[] = projectSeeds.map((seed, index) => {
   };
 });
 
+const listingSeeds: Array<{
+  creatorId: string;
+  projectId?: string;
+  title: string;
+  description: string;
+  price: number;
+  category: Discipline;
+  tags: string[];
+  stock: number | null;
+}> = [
+  { creatorId: 'c1', projectId: 'p1', title: 'Buwan ng Wika Print Set', description: 'A set of five giclée art prints from the Buwan ng Wika editorial series, printed on 250gsm matte stock.', price: 850, category: 'Illustration', tags: ['print', 'editorial'], stock: 25 },
+  { creatorId: 'c1', title: 'Custom Character Commission', description: 'A fully rendered character illustration, tailored to your brief. Includes two rounds of revisions.', price: 3500, category: 'Illustration', tags: ['commission', 'character design'], stock: null },
+  { creatorId: 'c2', title: 'Mobile UI Kit — Sari-Sari Style', description: 'A Figma component library of 60+ mobile screens inspired by neighborhood store ordering apps.', price: 1200, category: 'UI/UX Design', tags: ['ui kit', 'figma'], stock: 50 },
+  { creatorId: 'c2', title: 'Design System Audit', description: "A one-hour consult reviewing your product's design system, with a written action-item report.", price: 2500, category: 'UI/UX Design', tags: ['consulting'], stock: null },
+  { creatorId: 'c4', projectId: 'p10', title: 'Aswang Reimagined Art Print', description: 'A museum-quality print of the Aswang Reimagined 3D character series, signed and numbered.', price: 950, category: '3D Art', tags: ['print', 'folklore'], stock: 15 },
+  { creatorId: 'c4', title: 'Custom 3D Character Render', description: 'A stylized 3D character render built to spec in Blender, delivered as a high-res still.', price: 5000, category: '3D Art', tags: ['commission', 'blender'], stock: null },
+  { creatorId: 'c5', projectId: 'p12', title: 'Manggahan Branding Package', description: 'Full branding suite: logo, color system, and banig-inspired pattern library, delivered with usage guidelines.', price: 8000, category: 'Graphic Design', tags: ['branding'], stock: null },
+  { creatorId: 'c5', title: 'Banig Pattern Sticker Pack', description: 'A pack of 12 vinyl stickers featuring hand-drawn banig-inspired patterns.', price: 250, category: 'Graphic Design', tags: ['stickers', 'pattern'], stock: 100 },
+  { creatorId: 'c7', title: 'Brand Voice Copywriting Package', description: 'A full brand-voice package: tone guide, tagline options, and sample copy for your top three channels.', price: 4500, category: 'Writing', tags: ['copywriting'], stock: null },
+];
+
+export const listings: Listing[] = listingSeeds.map((seed, index) => {
+  const id = `l${index + 1}`;
+  const imageCount = 2 + (index % 2);
+  return {
+    id,
+    creatorId: seed.creatorId,
+    projectId: seed.projectId,
+    title: seed.title,
+    description: seed.description,
+    coverUrl: cover(`${id}-cover`),
+    images: Array.from({ length: imageCount }, (_, i) => cover(`${id}-media-${i + 1}`)),
+    price: seed.price,
+    category: seed.category,
+    tags: seed.tags,
+    stock: seed.stock,
+    createdAt: new Date(2026, 1, 1 + index * 5).toISOString(),
+  };
+});
+
 export const getCreatorById = (id: string): Creator | undefined =>
   creators.find((c) => c.id === id);
 
@@ -188,6 +228,15 @@ export const getProjectById = (id: string): Project | undefined =>
 
 export const getProjectsByCreator = (creatorId: string): Project[] =>
   projects.filter((p) => p.creatorId === creatorId);
+
+export const getListingById = (id: string): Listing | undefined =>
+  listings.find((l) => l.id === id);
+
+export const getListingsByCreator = (creatorId: string): Listing[] =>
+  listings.filter((l) => l.creatorId === creatorId);
+
+export const getListingByProjectId = (projectId: string): Listing | undefined =>
+  listings.find((l) => l.projectId === projectId);
 
 export const currentUser: Creator = creators[0];
 

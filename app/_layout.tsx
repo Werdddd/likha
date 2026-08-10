@@ -54,6 +54,13 @@ export default function RootLayout() {
         <Stack.Screen name="project/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="project/[id]/edit" options={{ presentation: 'modal' }} />
         <Stack.Screen name="creator/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="listing/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="listing/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="cart" />
+        <Stack.Screen name="checkout" />
+        <Stack.Screen name="order-confirmation" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="orders" />
+        <Stack.Screen name="order/[id]" />
         <Stack.Screen name="search" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="profile-edit" options={{ presentation: 'modal' }} />

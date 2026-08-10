@@ -25,6 +25,7 @@ export default function SettingsScreen() {
 
   const accountRows: SettingsRow[] = [
     { icon: 'person-outline', label: 'Edit Profile', onPress: () => router.push('/profile-edit') },
+    { icon: 'receipt-outline', label: 'My Orders', onPress: () => router.push('/orders') },
     { icon: 'notifications-outline', label: 'Notifications', onPress: () => router.push('/notifications') },
   ];
 

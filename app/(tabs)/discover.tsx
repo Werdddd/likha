@@ -9,7 +9,7 @@ import { FeaturedWorks } from '../../components/FeaturedWorks';
 import { FilterBar } from '../../components/FilterBar';
 import { MasonryGrid } from '../../components/MasonryGrid';
 import { AnimatedPressable } from '../../components/ui';
-import { disciplines, getCreatorById, notifications, projects } from '../../constants/mock-data';
+import { disciplines, getCreatorById, getListingByProjectId, notifications, projects } from '../../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import type { Discipline } from '../../types';
 
@@ -69,6 +69,7 @@ export default function DiscoverScreen() {
           <MasonryGrid
             projects={filteredProjects}
             getCreator={getCreatorById}
+            getListing={getListingByProjectId}
             onPressProject={(project) => router.push(`/project/${project.id}`)}
           />
         </View>

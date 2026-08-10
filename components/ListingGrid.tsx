@@ -3,24 +3,23 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { spacing, colors, type as t } from '../constants/theme';
 import { pseudoRatioForId, splitIntoBalancedColumns } from '../lib/masonry';
-import type { Creator, Listing, Project } from '../types';
-import { ProjectCard } from './ProjectCard';
+import type { Creator, Listing } from '../types';
+import { ListingCard } from './ListingCard';
 
-interface MasonryGridProps {
-  projects: Project[];
+interface ListingGridProps {
+  listings: Listing[];
   getCreator?: (creatorId: string) => Creator | undefined;
-  getListing?: (projectId: string) => Listing | undefined;
-  onPressProject: (project: Project) => void;
+  onPressListing: (listing: Listing) => void;
   emptyLabel?: string;
 }
 
-export function MasonryGrid({ projects, getCreator, getListing, onPressProject, emptyLabel }: MasonryGridProps) {
+export function ListingGrid({ listings, getCreator, onPressListing, emptyLabel }: ListingGridProps) {
   const [left, right] = useMemo(
-    () => splitIntoBalancedColumns(projects, (p) => pseudoRatioForId(p.id)),
-    [projects],
+    () => splitIntoBalancedColumns(listings, (l) => pseudoRatioForId(l.id)),
+    [listings],
   );
 
-  if (projects.length === 0) {
+  if (listings.length === 0) {
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyText}>{emptyLabel ?? 'Nothing to show yet.'}</Text>
@@ -31,24 +30,22 @@ export function MasonryGrid({ projects, getCreator, getListing, onPressProject, 
   return (
     <View style={styles.row}>
       <View style={styles.column}>
-        {left.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            creator={getCreator?.(project.creatorId)}
-            listing={getListing?.(project.id)}
-            onPress={() => onPressProject(project)}
+        {left.map((listing) => (
+          <ListingCard
+            key={listing.id}
+            listing={listing}
+            creator={getCreator?.(listing.creatorId)}
+            onPress={() => onPressListing(listing)}
           />
         ))}
       </View>
       <View style={styles.column}>
-        {right.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            creator={getCreator?.(project.creatorId)}
-            listing={getListing?.(project.id)}
-            onPress={() => onPressProject(project)}
+        {right.map((listing) => (
+          <ListingCard
+            key={listing.id}
+            listing={listing}
+            creator={getCreator?.(listing.creatorId)}
+            onPress={() => onPressListing(listing)}
           />
         ))}
       </View>

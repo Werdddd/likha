@@ -1,18 +1,16 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
+import { formatPrice } from '../lib/format';
 import { pseudoRatioForId } from '../lib/masonry';
-import type { Creator, Listing, Project } from '../types';
+import type { Creator, Listing } from '../types';
 import { AnimatedPressable } from './ui/AnimatedPressable';
 import { Avatar } from './ui/Avatar';
 
-interface ProjectCardProps {
-  project: Project;
+interface ListingCardProps {
+  listing: Listing;
   creator?: Creator;
-  listing?: Listing;
   onPress?: () => void;
 }
 
@@ -22,12 +20,12 @@ const textShadow = {
   textShadowRadius: 4,
 };
 
-export function ProjectCard({ project, creator, listing, onPress }: ProjectCardProps) {
-  const ratio = pseudoRatioForId(project.id);
+export function ListingCard({ listing, creator, onPress }: ListingCardProps) {
+  const ratio = pseudoRatioForId(listing.id);
 
   return (
     <AnimatedPressable onPress={onPress} style={styles.card} scaleTo={0.97}>
-      <Image source={{ uri: project.coverUrl }} style={[styles.cover, { aspectRatio: ratio }]} contentFit="cover" />
+      <Image source={{ uri: listing.coverUrl }} style={[styles.cover, { aspectRatio: ratio }]} contentFit="cover" />
 
       <View style={styles.topContent}>
         {creator && (
@@ -39,25 +37,13 @@ export function ProjectCard({ project, creator, listing, onPress }: ProjectCardP
           </View>
         )}
         <Text style={styles.title} numberOfLines={2}>
-          {project.title}
+          {listing.title}
         </Text>
       </View>
 
-      <View style={styles.reactionBadge}>
-        <Ionicons name="heart" size={11} color={colors.terracotta} />
-        <Text style={styles.reactionCount}>{project.appreciations}</Text>
+      <View style={styles.priceBadge}>
+        <Text style={styles.priceLabel}>{formatPrice(listing.price)}</Text>
       </View>
-
-      {listing && (
-        <AnimatedPressable
-          style={styles.shopBadge}
-          scaleTo={0.92}
-          onPress={() => router.push(`/listing/${listing.id}`)}
-        >
-          <Ionicons name="bag-outline" size={11} color={colors.ink} />
-          <Text style={styles.shopBadgeLabel}>In Shop</Text>
-        </AnimatedPressable>
-      )}
     </AnimatedPressable>
   );
 }
@@ -99,40 +85,19 @@ const styles = StyleSheet.create({
     color: colors.white,
     ...textShadow,
   },
-  reactionBadge: {
+  priceBadge: {
     position: 'absolute',
     bottom: spacing.xs + 2,
     right: spacing.xs + 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.white + 'E6',
+    backgroundColor: colors.likhaYellow,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.xs + 2,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     ...shadow.sm,
   },
-  reactionCount: {
+  priceLabel: {
     ...t.caption,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: colors.ink,
-  },
-  shopBadge: {
-    position: 'absolute',
-    bottom: spacing.xs + 2,
-    left: spacing.xs + 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.likhaYellow + 'E6',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.xs + 2,
-    paddingVertical: 4,
-    ...shadow.sm,
-  },
-  shopBadgeLabel: {
-    ...t.caption,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontFamily: 'PlusJakartaSans_700Bold',
     color: colors.ink,
   },
 });

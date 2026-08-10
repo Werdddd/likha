@@ -62,6 +62,58 @@ export interface FilterState {
   region: Region | null;
 }
 
+export interface Listing {
+  id: string;
+  creatorId: string;
+  projectId?: string;
+  title: string;
+  description: string;
+  coverUrl: string;
+  images: string[];
+  price: number;
+  category: Discipline;
+  tags: string[];
+  stock: number | null;
+  createdAt: string;
+}
+
+export interface CartLine {
+  listingId: string;
+  quantity: number;
+}
+
+export interface Address {
+  fullName: string;
+  phone: string;
+  line1: string;
+  city: string;
+  region: Region;
+  postalCode: string;
+}
+
+export type PaymentMethod = 'cod' | 'gcash' | 'card';
+
+export interface OrderItem {
+  listingId: string;
+  title: string;
+  coverUrl: string;
+  price: number;
+  quantity: number;
+}
+
+export interface Order {
+  id: string;
+  items: OrderItem[];
+  subtotal: number;
+  shippingFee: number;
+  total: number;
+  address: Address;
+  paymentMethod: PaymentMethod;
+  createdAt: string;
+}
+
+export type OrderStatus = 'processing' | 'shipped' | 'delivered';
+
 export type NotificationKind = 'appreciation' | 'follow' | 'comment';
 
 export interface Notification {
