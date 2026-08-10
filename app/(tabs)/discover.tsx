@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.white,
-    ...shadow.sm,
+   
   },
   unreadDot: {
     position: 'absolute',

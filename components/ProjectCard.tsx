@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: radius.lg,
     overflow: 'hidden',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     backgroundColor: colors.softGray,
     ...shadow.sm,
   },
