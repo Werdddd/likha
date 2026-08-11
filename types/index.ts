@@ -67,7 +67,6 @@ export interface Project {
   mediums: string[];
   region: Region;
   appreciations: number;
-  commentCount: number;
   createdAt: string;
 }
 
@@ -153,4 +152,12 @@ export interface Conversation {
   creatorId: string;
   messages: Message[];
   read: boolean;
+}
+
+export interface Comment {
+  id: string;
+  projectId: string;
+  creatorId: string;
+  text: string;
+  createdAt: string;
 }

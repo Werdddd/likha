@@ -20,15 +20,19 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CommentsSheet } from '../../components/CommentsSheet';
 import { AnimatedPressable, Avatar } from '../../components/ui';
 import { getCreatorById, getProjectById } from '../../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
+import { useCommentStore } from '../../store/comment-store';
 
 export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const project = getProjectById(id);
   const creator = project ? getCreatorById(project.creatorId) : undefined;
+  const commentCount = useCommentStore((s) => s.getCommentCount(id));
   const [appreciated, setAppreciated] = useState(false);
+  const [commentsVisible, setCommentsVisible] = useState(false);
   const [page, setPage] = useState(0);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -139,10 +143,14 @@ export default function ProjectDetailScreen() {
                 {project.appreciations + (appreciated ? 1 : 0)} Appreciations
               </Text>
             </AnimatedPressable>
-            <View style={styles.appreciateButton}>
+            <AnimatedPressable
+              style={styles.appreciateButton}
+              onPress={() => setCommentsVisible(true)}
+              scaleTo={0.9}
+            >
               <Ionicons name="chatbubble-outline" size={16} color={colors.ink} />
-              <Text style={styles.appreciateLabel}>{project.commentCount} Comments</Text>
-            </View>
+              <Text style={styles.appreciateLabel}>{commentCount} Comments</Text>
+            </AnimatedPressable>
           </View>
         </View>
       </ScrollView>
@@ -154,6 +162,12 @@ export default function ProjectDetailScreen() {
       >
         <Ionicons name="chevron-back" size={20} color={colors.ink} />
       </AnimatedPressable>
+
+      <CommentsSheet
+        visible={commentsVisible}
+        onClose={() => setCommentsVisible(false)}
+        projectId={project.id}
+      />
     </SafeAreaView>
   );
 }

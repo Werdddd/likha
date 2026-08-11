@@ -1,4 +1,5 @@
 import type {
+  Comment,
   Conversation,
   Creator,
   DigitalCategory,
@@ -200,7 +201,6 @@ export const projects: Project[] = projectSeeds.map((seed, index) => {
     mediums: seed.mediums,
     region: seed.region,
     appreciations: 20 + index * 13,
-    commentCount: index % 7,
     createdAt: new Date(2026, 0, 1 + index * 4).toISOString(),
   };
 });
@@ -332,3 +332,16 @@ export const getConversationsSorted = (list: Conversation[] = conversations): Co
     const bLast = b.messages[b.messages.length - 1]?.createdAt ?? '';
     return bLast.localeCompare(aLast);
   });
+
+export const comments: Comment[] = [
+  { id: 'cm1', projectId: 'p1', creatorId: 'c2', text: 'The color palette in this series is stunning. What was your reference for the third piece?', createdAt: new Date(2026, 7, 8, 10, 12).toISOString() },
+  { id: 'cm2', projectId: 'p1', creatorId: 'c5', text: 'This is such a lovely tribute to Buwan ng Wika. The linework is so clean.', createdAt: new Date(2026, 7, 8, 15, 40).toISOString() },
+  { id: 'cm3', projectId: 'p1', creatorId: 'c4', text: 'Would love to see a print set of these!', createdAt: new Date(2026, 7, 9, 8, 5).toISOString() },
+  { id: 'cm4', projectId: 'p2', creatorId: 'c3', text: 'The jeepney patterns here are so alive, love the composition.', createdAt: new Date(2026, 7, 8, 12, 5).toISOString() },
+  { id: 'cm5', projectId: 'p3', creatorId: 'c6', text: 'Sinulog energy captured perfectly, ang ganda!', createdAt: new Date(2026, 7, 4, 16, 20).toISOString() },
+  { id: 'cm6', projectId: 'p4', creatorId: 'c1', text: 'Really clean UX flow — the onboarding screens especially.', createdAt: new Date(2026, 7, 6, 9, 30).toISOString() },
+  { id: 'cm7', projectId: 'p4', creatorId: 'c7', text: 'This case study is super thorough, thanks for sharing your process.', createdAt: new Date(2026, 7, 7, 14, 2).toISOString() },
+];
+
+export const getCommentsByProjectId = (projectId: string): Comment[] =>
+  comments.filter((c) => c.projectId === projectId);
