@@ -3,15 +3,15 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { disciplines } from '../constants/mock-data';
+import { categories } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
-import type { Discipline } from '../types';
-import { AnimatedPressable, Button, Chip, TextField } from './ui';
+import type { Category } from '../types';
+import { AnimatedPressable, Button, CheckboxSelectField, TextField } from './ui';
 
 export interface ProjectFormValues {
   title: string;
   description: string;
-  discipline: Discipline;
+  category: Category;
   mediums: string;
 }
 
@@ -26,7 +26,7 @@ const placeholderMedia = ['pf-media-1', 'pf-media-2'];
 export function ProjectForm({ initialValues, submitLabel, onSubmit }: ProjectFormProps) {
   const [title, setTitle] = useState(initialValues?.title ?? '');
   const [description, setDescription] = useState(initialValues?.description ?? '');
-  const [discipline, setDiscipline] = useState<Discipline>(initialValues?.discipline ?? 'Illustration');
+  const [category, setCategory] = useState<Category>(initialValues?.category ?? 'Illustration');
   const [mediums, setMediums] = useState(initialValues?.mediums ?? '');
   const [mediaSeeds, setMediaSeeds] = useState<string[]>(placeholderMedia);
 
@@ -70,17 +70,19 @@ export function ProjectForm({ initialValues, submitLabel, onSubmit }: ProjectFor
         onChangeText={setMediums}
       />
 
-      <Text style={styles.sectionLabel}>Discipline</Text>
-      <View style={styles.chipWrap}>
-        {disciplines.map((d) => (
-          <Chip key={d} label={d} selected={discipline === d} onPress={() => setDiscipline(d)} />
-        ))}
-      </View>
+      <CheckboxSelectField
+        label="Category"
+        value={category}
+        options={categories}
+        onChange={(v) => setCategory(v as Category)}
+        icon="brush-outline"
+        searchable={false}
+      />
 
       <Button
         label={submitLabel}
         disabled={!canSubmit}
-        onPress={() => onSubmit({ title: title.trim(), description: description.trim(), discipline, mediums })}
+        onPress={() => onSubmit({ title: title.trim(), description: description.trim(), category, mediums })}
         style={styles.submit}
       />
     </ScrollView>
@@ -120,11 +122,6 @@ const styles = StyleSheet.create({
   addMediaLabel: {
     ...t.label,
     color: colors.warmBrown,
-  },
-  chipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: spacing.lg,
   },
   submit: {
     marginTop: spacing.sm,

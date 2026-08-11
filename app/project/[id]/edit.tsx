@@ -26,7 +26,7 @@ export default function EditProjectScreen() {
         initialValues={{
           title: project.title,
           description: project.description,
-          discipline: project.discipline,
+          category: project.category,
           mediums: project.mediums.join(', '),
         }}
         submitLabel="Save Changes"

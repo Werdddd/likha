@@ -1,6 +1,6 @@
 export type ProfileMode = 'portfolio' | 'open_for_work';
 
-export type Discipline =
+export type Category =
   | 'Illustration'
   | 'Graphic Design'
   | 'Photography'
@@ -40,7 +40,7 @@ export interface Creator {
   coverUrl: string;
   bio: string;
   region: Region;
-  disciplines: Discipline[];
+  categories: Category[];
   profileMode: ProfileMode;
   tags: string[];
   followerCount: number;
@@ -63,7 +63,7 @@ export interface Project {
   description: string;
   coverUrl: string;
   media: ProjectMedia[];
-  discipline: Discipline;
+  category: Category;
   mediums: string[];
   region: Region;
   appreciations: number;
@@ -72,7 +72,7 @@ export interface Project {
 
 export interface FilterState {
   query: string;
-  discipline: Discipline | null;
+  category: Category | null;
   region: Region | null;
 }
 

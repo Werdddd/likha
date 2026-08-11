@@ -19,7 +19,7 @@ export function CreatorCard({ creator, onPress }: CreatorCardProps) {
           {creator.name}
         </Text>
         <Text style={styles.meta} numberOfLines={1}>
-          {creator.disciplines.join(', ')} · {creator.region}
+          {creator.categories.join(', ')} · {creator.region}
         </Text>
       </View>
       {creator.profileMode === 'open_for_work' && (

@@ -9,18 +9,18 @@ import { CreatorCard } from '../components/CreatorCard';
 import { MasonryGrid } from '../components/MasonryGrid';
 import { SearchFilterSheet } from '../components/SearchFilterSheet';
 import { AnimatedPressable, TextField } from '../components/ui';
-import { creators, disciplines, getCreatorById, getListingByProjectId, projects, regions } from '../constants/mock-data';
+import { creators, categories, getCreatorById, getListingByProjectId, projects, regions } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
-import type { Discipline, Project, Region } from '../types';
+import type { Category, Project, Region } from '../types';
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
-  const [discipline, setDiscipline] = useState<Discipline | null>(null);
+  const [category, setCategory] = useState<Category | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const normalizedQuery = query.trim().toLowerCase();
-  const hasActiveFilters = discipline !== null || region !== null;
+  const hasActiveFilters = category !== null || region !== null;
   const isBrowsing = normalizedQuery.length === 0 && !hasActiveFilters;
 
   const results = useMemo(() => {
@@ -29,11 +29,11 @@ export default function SearchScreen() {
         normalizedQuery.length === 0 ||
         project.title.toLowerCase().includes(normalizedQuery) ||
         project.mediums.some((m) => m.toLowerCase().includes(normalizedQuery));
-      const matchesDiscipline = !discipline || project.discipline === discipline;
+      const matchesCategory = !category || project.category === category;
       const matchesRegion = !region || project.region === region;
-      return matchesQuery && matchesDiscipline && matchesRegion;
+      return matchesQuery && matchesCategory && matchesRegion;
     });
-  }, [normalizedQuery, discipline, region]);
+  }, [normalizedQuery, category, region]);
 
   const matchedCreators = useMemo(() => {
     if (normalizedQuery.length === 0) return [];
@@ -41,14 +41,14 @@ export default function SearchScreen() {
       (creator) =>
         (creator.name.toLowerCase().includes(normalizedQuery) ||
           creator.handle.toLowerCase().includes(normalizedQuery)) &&
-        (!discipline || creator.disciplines.includes(discipline)) &&
+        (!category || creator.categories.includes(category)) &&
         (!region || creator.region === region),
     );
-  }, [normalizedQuery, discipline, region]);
+  }, [normalizedQuery, category, region]);
 
-  const categories = useMemo(() => {
-    return disciplines
-      .map((d) => ({ discipline: d, projects: projects.filter((p) => p.discipline === d) }))
+  const categoryGroups = useMemo(() => {
+    return categories
+      .map((c) => ({ category: c, projects: projects.filter((p) => p.category === c) }))
       .filter((c) => c.projects.length > 0);
   }, []);
 
@@ -75,9 +75,9 @@ export default function SearchScreen() {
 
       {hasActiveFilters && (
         <View style={styles.activeFilters}>
-          {discipline && (
+          {category && (
             <View style={styles.activeChip}>
-              <Text style={styles.activeChipLabel}>{discipline}</Text>
+              <Text style={styles.activeChipLabel}>{category}</Text>
             </View>
           )}
           {region && (
@@ -90,13 +90,13 @@ export default function SearchScreen() {
 
       <ScrollView style={styles.scrollArea} contentContainerStyle={styles.list}>
         {isBrowsing ? (
-          categories.map((category) => (
+          categoryGroups.map((group) => (
             <CategoryRow
-              key={category.discipline}
-              title={category.discipline}
-              projects={category.projects}
+              key={group.category}
+              title={group.category}
+              projects={group.projects}
               onPressProject={goToProject}
-              onSeeAll={() => setDiscipline(category.discipline)}
+              onSeeAll={() => setCategory(group.category)}
             />
           ))
         ) : (
@@ -124,9 +124,9 @@ export default function SearchScreen() {
       <SearchFilterSheet
         visible={filtersOpen}
         onClose={() => setFiltersOpen(false)}
-        disciplines={disciplines}
-        discipline={discipline}
-        onSelectDiscipline={(v) => setDiscipline(v as Discipline | null)}
+        categories={categories}
+        category={category}
+        onSelectCategory={(v) => setCategory(v as Category | null)}
         regions={regions}
         region={region}
         onSelectRegion={(v) => setRegion(v as Region | null)}

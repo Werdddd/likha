@@ -10,9 +10,9 @@ import { Chip } from './ui/Chip';
 interface SearchFilterSheetProps {
   visible: boolean;
   onClose: () => void;
-  disciplines: string[];
-  discipline: string | null;
-  onSelectDiscipline: (value: string | null) => void;
+  categories: string[];
+  category: string | null;
+  onSelectCategory: (value: string | null) => void;
   regions: string[];
   region: string | null;
   onSelectRegion: (value: string | null) => void;
@@ -22,18 +22,18 @@ interface SearchFilterSheetProps {
 export function SearchFilterSheet({
   visible,
   onClose,
-  disciplines,
-  discipline,
-  onSelectDiscipline,
+  categories,
+  category,
+  onSelectCategory,
   regions,
   region,
   onSelectRegion,
   resultCount,
 }: SearchFilterSheetProps) {
-  const hasFilters = discipline !== null || region !== null;
+  const hasFilters = category !== null || region !== null;
 
   const clearAll = () => {
-    onSelectDiscipline(null);
+    onSelectCategory(null);
     onSelectRegion(null);
   };
 
@@ -51,15 +51,15 @@ export function SearchFilterSheet({
             </AnimatedPressable>
           </View>
 
-          <Text style={styles.groupLabel}>Discipline</Text>
+          <Text style={styles.groupLabel}>Category</Text>
           <View style={styles.chipWrap}>
-            <Chip label="All" selected={discipline === null} onPress={() => onSelectDiscipline(null)} />
-            {disciplines.map((option) => (
+            <Chip label="All" selected={category === null} onPress={() => onSelectCategory(null)} />
+            {categories.map((option) => (
               <Chip
                 key={option}
                 label={option}
-                selected={discipline === option}
-                onPress={() => onSelectDiscipline(discipline === option ? null : option)}
+                selected={category === option}
+                onPress={() => onSelectCategory(category === option ? null : option)}
               />
             ))}
           </View>

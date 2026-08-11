@@ -4,19 +4,19 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Chip, MultiSelectField, TextField } from '../../components/ui';
-import { disciplines, regions } from '../../constants/mock-data';
+import { categories, regions } from '../../constants/mock-data';
 import { colors, spacing, type as t } from '../../constants/theme';
 import { useSessionStore } from '../../store/session-store';
-import type { Discipline, Region } from '../../types';
+import type { Category, Region } from '../../types';
 
 export default function OnboardingProfileScreen() {
   const completeOnboarding = useSessionStore((s) => s.completeOnboarding);
   const [bio, setBio] = useState('');
   const [region, setRegion] = useState<Region>('Manila');
-  const [selectedDisciplines, setSelectedDisciplines] = useState<Discipline[]>(['Illustration']);
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>(['Illustration']);
 
   const handleFinish = () => {
-    completeOnboarding({ bio: bio.trim(), region, disciplines: selectedDisciplines, tags: [] });
+    completeOnboarding({ bio: bio.trim(), region, categories: selectedCategories, tags: [] });
     router.replace('/(tabs)/discover');
   };
 
@@ -36,13 +36,13 @@ export default function OnboardingProfileScreen() {
         />
 
         <MultiSelectField
-          label="Disciplines"
-          values={selectedDisciplines}
-          options={disciplines}
-          onChange={(v) => setSelectedDisciplines(v as Discipline[])}
+          label="Categories"
+          values={selectedCategories}
+          options={categories}
+          onChange={(v) => setSelectedCategories(v as Category[])}
           max={3}
           icon="layers-outline"
-          searchPlaceholder="Search disciplines"
+          searchPlaceholder="Search categories"
         />
 
         <Text style={styles.sectionLabel}>Region</Text>
@@ -55,7 +55,7 @@ export default function OnboardingProfileScreen() {
         <Button
           label="Finish Setup"
           onPress={handleFinish}
-          disabled={selectedDisciplines.length === 0}
+          disabled={selectedCategories.length === 0}
           style={styles.finishButton}
         />
       </ScrollView>

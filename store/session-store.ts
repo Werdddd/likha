@@ -11,7 +11,7 @@ interface SessionState {
   logIn: (email: string) => void;
   logOut: () => void;
   setProfileMode: (mode: ProfileMode) => void;
-  completeOnboarding: (details: Partial<Pick<Creator, 'bio' | 'region' | 'disciplines' | 'tags'>>) => void;
+  completeOnboarding: (details: Partial<Pick<Creator, 'bio' | 'region' | 'categories' | 'tags'>>) => void;
   updateProfile: (details: Partial<Creator>) => void;
 }
 

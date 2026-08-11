@@ -9,19 +9,19 @@ import { FeaturedWorks } from '../../components/FeaturedWorks';
 import { FilterBar } from '../../components/FilterBar';
 import { MasonryGrid } from '../../components/MasonryGrid';
 import { AnimatedPressable } from '../../components/ui';
-import { disciplines, getCreatorById, getListingByProjectId, notifications, projects } from '../../constants/mock-data';
+import { categories, getCreatorById, getListingByProjectId, notifications, projects } from '../../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { useMessageStore } from '../../store/message-store';
-import type { Discipline } from '../../types';
+import type { Category } from '../../types';
 
 export default function DiscoverScreen() {
-  const [discipline, setDiscipline] = useState<Discipline | null>(null);
+  const [category, setCategory] = useState<Category | null>(null);
   const hasUnread = useMemo(() => notifications.some((n) => !n.read), []);
   const hasUnreadMessages = useMessageStore((s) => s.conversations.some((c) => !c.read));
 
   const filteredProjects = useMemo(
-    () => (discipline ? projects.filter((p) => p.discipline === discipline) : projects),
-    [discipline],
+    () => (category ? projects.filter((p) => p.category === category) : projects),
+    [category],
   );
 
   const featuredProjects = useMemo(
@@ -57,9 +57,9 @@ export default function DiscoverScreen() {
 
       <View style={styles.filterBar}>
         <FilterBar
-          options={disciplines}
-          selected={discipline}
-          onSelect={(value) => setDiscipline(value as Discipline | null)}
+          options={categories}
+          selected={category}
+          onSelect={(value) => setCategory(value as Category | null)}
         />
       </View>
 

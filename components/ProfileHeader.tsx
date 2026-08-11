@@ -43,9 +43,9 @@ export function ProfileHeader({ creator, actions }: ProfileHeaderProps) {
         </Text>
 
         <View style={styles.pillRow}>
-          {creator.disciplines.map((discipline) => (
-            <View key={discipline} style={styles.disciplinePill}>
-              <Text style={styles.disciplinePillText}>{discipline}</Text>
+          {creator.categories.map((category) => (
+            <View key={category} style={styles.categoryPill}>
+              <Text style={styles.categoryPillText}>{category}</Text>
             </View>
           ))}
           {creator.profileMode === 'open_for_work' && (
@@ -140,13 +140,13 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.sm,
   },
-  disciplinePill: {
+  categoryPill: {
     paddingVertical: 5,
     paddingHorizontal: spacing.sm + 2,
     borderRadius: radius.pill,
     backgroundColor: colors.softGray,
   },
-  disciplinePillText: {
+  categoryPillText: {
     ...t.label,
     fontSize: 12,
     color: colors.ink,

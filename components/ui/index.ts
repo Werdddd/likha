@@ -2,6 +2,7 @@ export { AnimatedPressable } from './AnimatedPressable';
 export { Avatar } from './Avatar';
 export { Button } from './Button';
 export { Chip } from './Chip';
+export { CheckboxSelectField } from './CheckboxSelectField';
 export { MultiSelectField } from './MultiSelectField';
 export { QuantityStepper } from './QuantityStepper';
 export { SelectField } from './SelectField';

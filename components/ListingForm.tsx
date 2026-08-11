@@ -7,7 +7,7 @@ import { digitalCategories, getProjectsByCreator, physicalCategories } from '../
 import { colors, radius, spacing, type as t } from '../constants/theme';
 import { useSessionStore } from '../store/session-store';
 import type { ProductCategory, ProductType } from '../types';
-import { AnimatedPressable, Button, Chip, SelectField, TextField } from './ui';
+import { AnimatedPressable, Button, CheckboxSelectField, SelectField, TextField } from './ui';
 
 export interface ListingFormValues {
   title: string;
@@ -110,17 +110,17 @@ export function ListingForm({ submitLabel, onSubmit }: ListingFormProps) {
         onChangeText={setPrice}
       />
 
-      <Text style={styles.sectionLabel}>Product type</Text>
-      <View style={styles.chipWrap}>
-        {PRODUCT_TYPES.map((option) => (
-          <Chip
-            key={option.value}
-            label={option.label}
-            selected={productType === option.value}
-            onPress={() => handleSelectProductType(option.value)}
-          />
-        ))}
-      </View>
+      <CheckboxSelectField
+        label="Product type"
+        value={PRODUCT_TYPES.find((o) => o.value === productType)?.label ?? PRODUCT_TYPES[0].label}
+        options={PRODUCT_TYPES.map((o) => o.label)}
+        onChange={(label) => {
+          const option = PRODUCT_TYPES.find((o) => o.label === label);
+          if (option) handleSelectProductType(option.value);
+        }}
+        icon="pricetag-outline"
+        searchable={false}
+      />
 
       {productType === 'physical' && (
         <TextField
@@ -132,12 +132,14 @@ export function ListingForm({ submitLabel, onSubmit }: ListingFormProps) {
         />
       )}
 
-      <Text style={styles.sectionLabel}>Category</Text>
-      <View style={styles.chipWrap}>
-        {categoryOptions.map((d) => (
-          <Chip key={d} label={d} selected={category === d} onPress={() => setCategory(d)} />
-        ))}
-      </View>
+      <CheckboxSelectField
+        label="Category"
+        value={category}
+        options={categoryOptions}
+        onChange={(v) => setCategory(v as ProductCategory)}
+        icon="grid-outline"
+        searchable={false}
+      />
 
       {myProjects.length > 0 && (
         <SelectField
@@ -187,11 +189,6 @@ const styles = StyleSheet.create({
   addMediaLabel: {
     ...t.label,
     color: colors.warmBrown,
-  },
-  chipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: spacing.lg,
   },
   submit: {
     marginTop: spacing.sm,

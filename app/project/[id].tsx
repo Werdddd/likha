@@ -122,7 +122,7 @@ export default function ProjectDetailScreen() {
           <Text style={styles.description}>{project.description}</Text>
 
           <View style={styles.tagRow}>
-            <Text style={styles.tag}>{project.discipline}</Text>
+            <Text style={styles.tag}>{project.category}</Text>
             {project.mediums.map((m) => (
               <Text key={m} style={styles.tag}>
                 {m}

@@ -5,10 +5,10 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, AnimatedPressable, Button, MultiSelectField, SelectField, TextField } from '../components/ui';
-import { disciplines, regions } from '../constants/mock-data';
+import { categories, regions } from '../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { useSessionStore } from '../store/session-store';
-import type { Discipline, ProfileMode, Region } from '../types';
+import type { Category, ProfileMode, Region } from '../types';
 
 const BIO_MAX_LENGTH = 160;
 
@@ -19,11 +19,11 @@ export default function ProfileEditScreen() {
   const [name, setName] = useState(currentUser.name);
   const [bio, setBio] = useState(currentUser.bio);
   const [region, setRegion] = useState<Region>(currentUser.region);
-  const [selectedDisciplines, setSelectedDisciplines] = useState<Discipline[]>(currentUser.disciplines);
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>(currentUser.categories);
   const [profileMode, setProfileMode] = useState<ProfileMode>(currentUser.profileMode);
 
   const handleSave = () => {
-    updateProfile({ name: name.trim(), bio: bio.trim(), region, disciplines: selectedDisciplines, profileMode });
+    updateProfile({ name: name.trim(), bio: bio.trim(), region, categories: selectedCategories, profileMode });
     router.back();
   };
 
@@ -51,13 +51,13 @@ export default function ProfileEditScreen() {
         </Text>
 
         <MultiSelectField
-          label="Disciplines"
-          values={selectedDisciplines}
-          options={disciplines}
-          onChange={(v) => setSelectedDisciplines(v as Discipline[])}
+          label="Categories"
+          values={selectedCategories}
+          options={categories}
+          onChange={(v) => setSelectedCategories(v as Category[])}
           max={3}
           icon="layers-outline"
-          searchPlaceholder="Search disciplines"
+          searchPlaceholder="Search categories"
         />
 
         <SelectField
@@ -91,7 +91,7 @@ export default function ProfileEditScreen() {
         <Button
           label="Save Changes"
           onPress={handleSave}
-          disabled={selectedDisciplines.length === 0}
+          disabled={selectedCategories.length === 0}
           style={styles.saveButton}
         />
       </ScrollView>
