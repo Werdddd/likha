@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FilterBar } from '../../components/FilterBar';
 import { ListingGrid } from '../../components/ListingGrid';
-import { AnimatedPressable, Chip } from '../../components/ui';
+import { ProductTypeFilterSheet } from '../../components/ProductTypeFilterSheet';
+import { AnimatedPressable, TextField } from '../../components/ui';
 import { digitalCategories, getCreatorById, listings, physicalCategories } from '../../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../../constants/theme';
 import { useCartStore } from '../../store/cart-store';
@@ -20,7 +21,11 @@ const PRODUCT_TYPE_FILTERS: Array<{ value: ProductType; label: string }> = [
 export default function ShopScreen() {
   const [productType, setProductType] = useState<ProductType | null>(null);
   const [category, setCategory] = useState<ProductCategory | null>(null);
+  const [query, setQuery] = useState('');
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const cartCount = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0));
+
+  const normalizedQuery = query.trim().toLowerCase();
 
   const categoryOptions =
     productType === 'digital' ? digitalCategories : productType === 'physical' ? physicalCategories : [...digitalCategories, ...physicalCategories];
@@ -35,10 +40,16 @@ export default function ShopScreen() {
 
   const filteredListings = useMemo(
     () =>
-      listings.filter(
-        (l) => (!productType || l.productType === productType) && (!category || l.category === category),
-      ),
-    [productType, category],
+      listings.filter((l) => {
+        const matchesType = !productType || l.productType === productType;
+        const matchesCategory = !category || l.category === category;
+        const matchesQuery =
+          normalizedQuery.length === 0 ||
+          l.title.toLowerCase().includes(normalizedQuery) ||
+          l.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery));
+        return matchesType && matchesCategory && matchesQuery;
+      }),
+    [productType, category, normalizedQuery],
   );
 
   return (
@@ -46,8 +57,8 @@ export default function ShopScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Shop</Text>
         <View style={styles.headerActions}>
-          <AnimatedPressable style={styles.iconButton} onPress={() => router.push('/search')} scaleTo={0.92}>
-            <Ionicons name="search" size={20} color={colors.ink} />
+          <AnimatedPressable style={styles.iconButton} onPress={() => router.push('/orders')} scaleTo={0.92}>
+            <Ionicons name="receipt-outline" size={20} color={colors.ink} />
           </AnimatedPressable>
           <AnimatedPressable style={styles.iconButton} onPress={() => router.push('/cart')} scaleTo={0.92}>
             <Ionicons name="bag-outline" size={20} color={colors.ink} />
@@ -60,16 +71,19 @@ export default function ShopScreen() {
         </View>
       </View>
 
-      <View style={styles.typeRow}>
-        <Chip label="All" selected={productType === null} onPress={() => handleSelectProductType(null)} />
-        {PRODUCT_TYPE_FILTERS.map((option) => (
-          <Chip
-            key={option.value}
-            label={option.label}
-            selected={productType === option.value}
-            onPress={() => handleSelectProductType(productType === option.value ? null : option.value)}
-          />
-        ))}
+      <View style={styles.searchRow}>
+        <TextField
+          label=""
+          placeholder="Search listings, tags..."
+          value={query}
+          onChangeText={setQuery}
+          leadingIcon="search"
+          containerStyle={styles.searchField}
+        />
+        <AnimatedPressable style={styles.filterButton} onPress={() => setFilterSheetOpen(true)} scaleTo={0.92}>
+          <Ionicons name="options-outline" size={20} color={colors.ink} />
+          {productType !== null && <View style={styles.filterDot} />}
+        </AnimatedPressable>
       </View>
 
       <View style={styles.filterBar}>
@@ -79,6 +93,14 @@ export default function ShopScreen() {
           onSelect={(value) => setCategory(value as ProductCategory | null)}
         />
       </View>
+
+      <ProductTypeFilterSheet
+        visible={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        options={PRODUCT_TYPE_FILTERS}
+        value={productType}
+        onSelect={handleSelectProductType}
+      />
 
       <ScrollView contentContainerStyle={styles.list}>
         <View style={styles.gridWrap}>
@@ -141,11 +163,35 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_700Bold',
     color: colors.white,
   },
-  typeRow: {
+  searchRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
+  },
+  searchField: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.softGray + '4d',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.terracotta,
+    borderWidth: 1.5,
+    borderColor: colors.canvas,
   },
   filterBar: {
     marginBottom: spacing.sm,

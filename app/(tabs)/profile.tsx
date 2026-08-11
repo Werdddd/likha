@@ -28,9 +28,6 @@ export default function ProfileScreen() {
               >
                 <Ionicons name="pencil" size={18} color={colors.ink} />
               </AnimatedPressable>
-              <AnimatedPressable style={styles.iconButton} onPress={() => router.push('/orders')} scaleTo={0.92}>
-                <Ionicons name="receipt-outline" size={18} color={colors.ink} />
-              </AnimatedPressable>
               <AnimatedPressable style={styles.iconButton} onPress={() => router.push('/settings')} scaleTo={0.92}>
                 <Ionicons name="settings-outline" size={18} color={colors.ink} />
               </AnimatedPressable>
