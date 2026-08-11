@@ -140,3 +140,17 @@ export interface Notification {
   createdAt: string;
   read: boolean;
 }
+
+export interface Message {
+  id: string;
+  text: string;
+  fromMe: boolean;
+  createdAt: string;
+}
+
+export interface Conversation {
+  id: string;
+  creatorId: string;
+  messages: Message[];
+  read: boolean;
+}

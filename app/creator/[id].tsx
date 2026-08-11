@@ -9,12 +9,14 @@ import { ProfileHeader } from '../../components/ProfileHeader';
 import { AnimatedPressable, Button } from '../../components/ui';
 import { getCreatorById, getProjectsByCreator } from '../../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
+import { useMessageStore } from '../../store/message-store';
 
 export default function CreatorProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const creator = getCreatorById(id);
   const [isFollowing, setIsFollowing] = useState(false);
   const insets = useSafeAreaInsets();
+  const getOrCreateConversation = useMessageStore((s) => s.getOrCreateConversation);
 
   if (!creator) {
     return (
@@ -36,7 +38,11 @@ export default function CreatorProfileScreen() {
           actions={
             <View style={styles.actionButtons}>
               {creator.profileMode === 'open_for_work' && (
-                <Button label="Hire Me" onPress={() => {}} style={styles.hireButton} />
+                <Button
+                  label="Hire Me"
+                  onPress={() => router.push(`/message/${getOrCreateConversation(creator.id)}`)}
+                  style={styles.hireButton}
+                />
               )}
               <Button
                 label={isFollowing ? 'Following' : 'Follow'}
