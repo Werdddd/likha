@@ -1,16 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -21,6 +12,7 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CommentsSheet } from '../../components/CommentsSheet';
+import { MediaStackCarousel } from '../../components/MediaStackCarousel';
 import { AnimatedPressable, Avatar } from '../../components/ui';
 import { getCreatorById, getProjectById } from '../../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
@@ -33,8 +25,6 @@ export default function ProjectDetailScreen() {
   const commentCount = useCommentStore((s) => s.getCommentCount(id));
   const [appreciated, setAppreciated] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
-  const [page, setPage] = useState(0);
-  const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
   const heroOpacity = useSharedValue(0);
@@ -60,10 +50,6 @@ export default function ProjectDetailScreen() {
     heartScale.value = withSequence(withSpring(1.3, { duration: 150 }), withSpring(1, { duration: 150 }));
   };
 
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setPage(Math.round(e.nativeEvent.contentOffset.x / width));
-  };
-
   if (!project) {
     return (
       <SafeAreaView style={styles.screen}>
@@ -78,30 +64,7 @@ export default function ProjectDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView>
         <Animated.View style={heroStyle}>
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-          >
-            {project.media.map((media) => (
-              <Image
-                key={media.id}
-                source={{ uri: media.url }}
-                style={{ width, height: width }}
-                contentFit="cover"
-              />
-            ))}
-          </ScrollView>
-
-          {project.media.length > 1 && (
-            <View style={styles.dots}>
-              {project.media.map((media, index) => (
-                <View key={media.id} style={[styles.dot, index === page && styles.dotActive]} />
-              ))}
-            </View>
-          )}
+          <MediaStackCarousel media={project.media} />
         </Animated.View>
 
         <View style={styles.content}>
@@ -176,25 +139,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.canvas,
-  },
-  dots: {
-    position: 'absolute',
-    bottom: spacing.md,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.white + '80',
-  },
-  dotActive: {
-    backgroundColor: colors.white,
-    width: 16,
   },
   content: {
     padding: spacing.lg,
