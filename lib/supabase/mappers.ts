@@ -1,4 +1,4 @@
-import type { Category, Creator, ProfileMode, Region } from '../../types';
+import type { Category, Comment, Creator, ProfileMode, Project, ProjectMedia, Region } from '../../types';
 
 export interface ProfileRow {
   id: string;
@@ -72,4 +72,73 @@ export function creatorUpdatesToProfileRow(
     }
   }
   return row;
+}
+
+export interface ProjectMediaRow {
+  id: string;
+  url: string;
+  type: string;
+  caption: string | null;
+  position: number;
+}
+
+export interface ProjectRow {
+  id: string;
+  creator_id: string;
+  title: string;
+  description: string;
+  cover_url: string | null;
+  categories: string[];
+  mediums: string[];
+  region: string;
+  appreciation_count: number;
+  comment_count: number;
+  created_at: string;
+  profiles?: ProfileRow | null;
+  project_media?: ProjectMediaRow[];
+}
+
+export function projectRowToProject(row: ProjectRow): Project {
+  const media: ProjectMedia[] = (row.project_media ?? [])
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map((m) => ({
+      id: m.id,
+      type: m.type as ProjectMedia['type'],
+      url: m.url,
+      caption: m.caption ?? undefined,
+    }));
+
+  return {
+    id: row.id,
+    creatorId: row.creator_id,
+    title: row.title,
+    description: row.description,
+    coverUrl: row.cover_url ?? media[0]?.url ?? '',
+    media,
+    categories: row.categories,
+    mediums: row.mediums,
+    region: row.region as Region,
+    appreciations: row.appreciation_count,
+    commentCount: row.comment_count,
+    createdAt: row.created_at,
+  };
+}
+
+export interface CommentRow {
+  id: string;
+  project_id: string;
+  creator_id: string;
+  text: string;
+  created_at: string;
+}
+
+export function commentRowToComment(row: CommentRow): Comment {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    creatorId: row.creator_id,
+    text: row.text,
+    createdAt: row.created_at,
+  };
 }

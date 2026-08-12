@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,15 +9,29 @@ import { CreatorCard } from '../components/CreatorCard';
 import { MasonryGrid } from '../components/MasonryGrid';
 import { SearchFilterSheet } from '../components/SearchFilterSheet';
 import { AnimatedPressable, TextField } from '../components/ui';
-import { creators, categories, getCreatorById, getListingByProjectId, projects, regions } from '../constants/mock-data';
+import { categories, regions } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
-import type { Category, Project, Region } from '../types';
+import { useCreatorStore } from '../store/creator-store';
+import { useProjectStore } from '../store/project-store';
+import type { Category, Creator, Project, Region } from '../types';
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<Category | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [matchedCreators, setMatchedCreators] = useState<Creator[]>([]);
+
+  const projectsById = useProjectStore((s) => s.projectsById);
+  const fetchFeed = useProjectStore((s) => s.fetchFeed);
+  const searchCreators = useCreatorStore((s) => s.searchCreators);
+  const getCreator = useCreatorStore((s) => s.getCreator);
+
+  useEffect(() => {
+    fetchFeed();
+  }, [fetchFeed]);
+
+  const projects = useMemo(() => Object.values(projectsById), [projectsById]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const hasActiveFilters = category !== null || region !== null;
@@ -29,28 +43,31 @@ export default function SearchScreen() {
         normalizedQuery.length === 0 ||
         project.title.toLowerCase().includes(normalizedQuery) ||
         project.mediums.some((m) => m.toLowerCase().includes(normalizedQuery));
-      const matchesCategory = !category || project.category === category;
+      const matchesCategory = !category || project.categories.includes(category);
       const matchesRegion = !region || project.region === region;
       return matchesQuery && matchesCategory && matchesRegion;
     });
-  }, [normalizedQuery, category, region]);
+  }, [normalizedQuery, category, region, projects]);
 
-  const matchedCreators = useMemo(() => {
-    if (normalizedQuery.length === 0) return [];
-    return creators.filter(
-      (creator) =>
-        (creator.name.toLowerCase().includes(normalizedQuery) ||
-          creator.handle.toLowerCase().includes(normalizedQuery)) &&
-        (!category || creator.categories.includes(category)) &&
-        (!region || creator.region === region),
-    );
-  }, [normalizedQuery, category, region]);
+  useEffect(() => {
+    if (normalizedQuery.length === 0) {
+      setMatchedCreators([]);
+      return;
+    }
+    let cancelled = false;
+    searchCreators(normalizedQuery, { category, region }).then((results) => {
+      if (!cancelled) setMatchedCreators(results);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [normalizedQuery, category, region, searchCreators]);
 
   const categoryGroups = useMemo(() => {
     return categories
-      .map((c) => ({ category: c, projects: projects.filter((p) => p.category === c) }))
+      .map((c) => ({ category: c, projects: projects.filter((p) => p.categories.includes(c)) }))
       .filter((c) => c.projects.length > 0);
-  }, []);
+  }, [projects]);
 
   const goToProject = (project: Project) => router.push(`/project/${project.id}`);
 
@@ -112,8 +129,7 @@ export default function SearchScreen() {
 
             <MasonryGrid
               projects={results}
-              getCreator={getCreatorById}
-              getListing={getListingByProjectId}
+              getCreator={getCreator}
               onPressProject={goToProject}
               emptyLabel="No results. Try a different search or filter."
             />

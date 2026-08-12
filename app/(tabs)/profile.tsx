@@ -1,18 +1,31 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MasonryGrid } from '../../components/MasonryGrid';
 import { ProfileHeader } from '../../components/ProfileHeader';
 import { AnimatedPressable, Button } from '../../components/ui';
-import { getProjectsByCreator } from '../../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../../constants/theme';
+import { useProjectStore } from '../../store/project-store';
 import { useSessionStore } from '../../store/session-store';
 
 export default function ProfileScreen() {
   const currentUser = useSessionStore((s) => s.currentUser);
-  const myProjects = getProjectsByCreator(currentUser.id);
+  const fetchByCreator = useProjectStore((s) => s.fetchByCreator);
+  const projectsById = useProjectStore((s) => s.projectsById);
+  const myProjects = useMemo(
+    () =>
+      Object.values(projectsById)
+        .filter((p) => p.creatorId === currentUser.id)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [projectsById, currentUser.id],
+  );
+
+  useEffect(() => {
+    if (currentUser.id) fetchByCreator(currentUser.id);
+  }, [currentUser.id, fetchByCreator]);
 
   return (
     <SafeAreaView style={styles.screen}>

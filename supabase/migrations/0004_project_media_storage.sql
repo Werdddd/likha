@@ -1,0 +1,31 @@
+-- Phase 2: storage bucket for project media uploads.
+-- Path convention: project-media/{creator_id}/{filename}
+
+insert into storage.buckets (id, name, public)
+values ('project-media', 'project-media', true)
+on conflict (id) do nothing;
+
+create policy "Project media files are publicly readable"
+  on storage.objects for select
+  using (bucket_id = 'project-media');
+
+create policy "Users can upload their own project media files"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'project-media'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+create policy "Users can update their own project media files"
+  on storage.objects for update
+  using (
+    bucket_id = 'project-media'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+create policy "Users can delete their own project media files"
+  on storage.objects for delete
+  using (
+    bucket_id = 'project-media'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );

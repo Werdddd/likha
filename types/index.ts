@@ -63,10 +63,11 @@ export interface Project {
   description: string;
   coverUrl: string;
   media: ProjectMedia[];
-  category: Category;
+  categories: string[];
   mediums: string[];
   region: Region;
   appreciations: number;
+  commentCount: number;
   createdAt: string;
 }
 

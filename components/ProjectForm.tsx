@@ -1,62 +1,86 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { categories } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
-import type { Category } from '../types';
-import { AnimatedPressable, Button, CheckboxSelectField, TextField } from './ui';
+import { pickAndUploadImages } from '../lib/upload';
+import { useSessionStore } from '../store/session-store';
+import { CategoryMultiSelectField } from './CategoryMultiSelectField';
+import { AnimatedPressable, Button, TextField } from './ui';
 
 export interface ProjectFormValues {
   title: string;
   description: string;
-  category: Category;
+  categories: string[];
   mediums: string;
+  media: string[];
 }
 
 interface ProjectFormProps {
   initialValues?: Partial<ProjectFormValues>;
   submitLabel: string;
   onSubmit: (values: ProjectFormValues) => void;
+  isSubmitting?: boolean;
 }
 
-const placeholderMedia = ['pf-media-1', 'pf-media-2'];
-
-export function ProjectForm({ initialValues, submitLabel, onSubmit }: ProjectFormProps) {
+export function ProjectForm({ initialValues, submitLabel, onSubmit, isSubmitting }: ProjectFormProps) {
+  const currentUserId = useSessionStore((s) => s.currentUser.id);
   const [title, setTitle] = useState(initialValues?.title ?? '');
   const [description, setDescription] = useState(initialValues?.description ?? '');
-  const [category, setCategory] = useState<Category>(initialValues?.category ?? 'Illustration');
+  const [categories, setCategories] = useState<string[]>(initialValues?.categories ?? []);
   const [mediums, setMediums] = useState(initialValues?.mediums ?? '');
-  const [mediaSeeds, setMediaSeeds] = useState<string[]>(placeholderMedia);
+  const [media, setMedia] = useState<string[]>(initialValues?.media ?? []);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
-  const canSubmit = title.trim().length > 0 && description.trim().length > 0;
+  const canSubmit =
+    title.trim().length > 0 && description.trim().length > 0 && categories.length > 0 && !isSubmitting;
+
+  const handleAddMedia = async () => {
+    setIsUploadingMedia(true);
+    const urls = await pickAndUploadImages('project-media', currentUserId, 'media');
+    setIsUploadingMedia(false);
+    if (urls.length > 0) setMedia((prev) => [...prev, ...urls]);
+  };
+
+  const handleRemoveMedia = (url: string) => {
+    setMedia((prev) => prev.filter((m) => m !== url));
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.sectionLabel}>Media</Text>
       <View style={styles.mediaRow}>
-        {mediaSeeds.map((seed) => (
-          <Image
-            key={seed}
-            source={{ uri: `https://picsum.photos/seed/${seed}/300/300` }}
-            style={styles.mediaThumb}
-            contentFit="cover"
-          />
+        {media.map((url) => (
+          <View key={url} style={styles.mediaThumbWrap}>
+            <Image source={{ uri: url }} style={styles.mediaThumb} contentFit="cover" />
+            <AnimatedPressable
+              style={styles.removeMediaButton}
+              scaleTo={0.9}
+              onPress={() => handleRemoveMedia(url)}
+              hitSlop={6}
+            >
+              <Ionicons name="close" size={13} color={colors.white} />
+            </AnimatedPressable>
+          </View>
         ))}
-        <AnimatedPressable
-          style={styles.addMedia}
-          scaleTo={0.95}
-          onPress={() => setMediaSeeds((prev) => [...prev, `pf-media-${prev.length + 1}-${Date.now()}`])}
-        >
-          <Ionicons name="add" size={22} color={colors.warmBrown} />
-          <Text style={styles.addMediaLabel}>Add</Text>
+        <AnimatedPressable style={styles.addMedia} scaleTo={0.95} onPress={handleAddMedia} disabled={isUploadingMedia}>
+          {isUploadingMedia ? (
+            <ActivityIndicator size="small" color={colors.warmBrown} />
+          ) : (
+            <>
+              <Ionicons name="add" size={22} color={colors.warmBrown} />
+              <Text style={styles.addMediaLabel}>Add</Text>
+            </>
+          )}
         </AnimatedPressable>
       </View>
 
-      <TextField label="Title" placeholder="Project title" value={title} onChangeText={setTitle} />
+      <Text style={styles.requiredHint}>Fields marked * are required.</Text>
+
+      <TextField label="Title *" placeholder="Project title" value={title} onChangeText={setTitle} />
       <TextField
-        label="Description"
+        label="Description *"
         placeholder="Describe your process and the story behind the work"
         multiline
         numberOfLines={4}
@@ -70,19 +94,14 @@ export function ProjectForm({ initialValues, submitLabel, onSubmit }: ProjectFor
         onChangeText={setMediums}
       />
 
-      <CheckboxSelectField
-        label="Category"
-        value={category}
-        options={categories}
-        onChange={(v) => setCategory(v as Category)}
-        icon="brush-outline"
-        searchable={false}
-      />
+      <CategoryMultiSelectField label="Categories *" values={categories} onChange={setCategories} />
 
       <Button
         label={submitLabel}
         disabled={!canSubmit}
-        onPress={() => onSubmit({ title: title.trim(), description: description.trim(), category, mediums })}
+        onPress={() =>
+          onSubmit({ title: title.trim(), description: description.trim(), categories, mediums, media })
+        }
         style={styles.submit}
       />
     </ScrollView>
@@ -104,11 +123,33 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.lg,
   },
+  mediaThumbWrap: {
+    width: 88,
+    height: 88,
+  },
   mediaThumb: {
     width: 88,
     height: 88,
     borderRadius: radius.md,
     backgroundColor: colors.softGray,
+  },
+  removeMediaButton: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: radius.pill,
+    backgroundColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.canvas,
+  },
+  requiredHint: {
+    ...t.caption,
+    color: colors.warmBrown,
+    marginBottom: spacing.sm,
   },
   addMedia: {
     width: 88,

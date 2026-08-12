@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warmBrown + '40',
   },
   dotActive: {
-    backgroundColor: colors.terracotta,
+    backgroundColor: colors.likhaYellow,
     width: 16,
   },
 });

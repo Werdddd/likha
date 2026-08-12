@@ -44,7 +44,7 @@ export function ProjectCard({ project, creator, listing, onPress }: ProjectCardP
       </View>
 
       <View style={styles.reactionBadge}>
-        <Ionicons name="heart" size={11} color={colors.terracotta} />
+        <Ionicons name="heart" size={11} color={colors.likhaYellow} />
         <Text style={styles.reactionCount}>{project.appreciations}</Text>
       </View>
 

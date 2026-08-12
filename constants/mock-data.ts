@@ -197,10 +197,11 @@ export const projects: Project[] = projectSeeds.map((seed, index) => {
       type: 'image' as const,
       url: cover(`${id}-media-${i + 1}`),
     })),
-    category: seed.category,
+    categories: [seed.category],
     mediums: seed.mediums,
     region: seed.region,
     appreciations: 20 + index * 13,
+    commentCount: 0,
     createdAt: new Date(2026, 0, 1 + index * 4).toISOString(),
   };
 });

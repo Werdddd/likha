@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -14,15 +14,26 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { CommentsSheet } from '../../components/CommentsSheet';
 import { MediaStackCarousel } from '../../components/MediaStackCarousel';
 import { AnimatedPressable, Avatar } from '../../components/ui';
-import { getCreatorById, getProjectById } from '../../constants/mock-data';
+import { iconForCategory } from '../../constants/category-icons';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
-import { useCommentStore } from '../../store/comment-store';
+import { capitalize } from '../../lib/format';
+import { useCreatorStore } from '../../store/creator-store';
+import { useProjectStore } from '../../store/project-store';
+import { useSessionStore } from '../../store/session-store';
+import type { Project } from '../../types';
 
 export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const project = getProjectById(id);
-  const creator = project ? getCreatorById(project.creatorId) : undefined;
-  const commentCount = useCommentStore((s) => s.getCommentCount(id));
+  const currentUserId = useSessionStore((s) => s.currentUser.id);
+
+  const cachedProject = useProjectStore((s) => s.projectsById[id]);
+  const fetchById = useProjectStore((s) => s.fetchById);
+  const appreciate = useProjectStore((s) => s.appreciate);
+  const unappreciate = useProjectStore((s) => s.unappreciate);
+  const hasAppreciated = useProjectStore((s) => s.hasAppreciated);
+  const creator = useCreatorStore((s) => (cachedProject ? s.getCreator(cachedProject.creatorId) : undefined));
+
+  const [project, setProject] = useState<Project | null | undefined>(cachedProject);
   const [appreciated, setAppreciated] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const insets = useSafeAreaInsets();
@@ -30,6 +41,19 @@ export default function ProjectDetailScreen() {
   const heroOpacity = useSharedValue(0);
   const heroScale = useSharedValue(0.96);
   const heartScale = useSharedValue(1);
+
+  useEffect(() => {
+    if (cachedProject) {
+      setProject(cachedProject);
+    } else {
+      fetchById(id).then(setProject);
+    }
+  }, [id, cachedProject, fetchById]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    hasAppreciated(id, currentUserId).then(setAppreciated);
+  }, [id, currentUserId, hasAppreciated]);
 
   useEffect(() => {
     heroOpacity.value = withTiming(1, { duration: 320 });
@@ -46,9 +70,25 @@ export default function ProjectDetailScreen() {
   }));
 
   const toggleAppreciate = () => {
-    setAppreciated((v) => !v);
+    if (!currentUserId) return;
     heartScale.value = withSequence(withSpring(1.3, { duration: 150 }), withSpring(1, { duration: 150 }));
+    if (appreciated) {
+      setAppreciated(false);
+      unappreciate(id, currentUserId);
+    } else {
+      setAppreciated(true);
+      appreciate(id, currentUserId);
+    }
   };
+
+  if (project === undefined) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <Stack.Screen options={{ title: 'Project' }} />
+        <ActivityIndicator style={styles.loading} color={colors.ink} />
+      </SafeAreaView>
+    );
+  }
 
   if (!project) {
     return (
@@ -73,46 +113,78 @@ export default function ProjectDetailScreen() {
           {creator && (
             <Link href={`/creator/${creator.id}`} asChild>
               <AnimatedPressable style={styles.creatorRow} scaleTo={0.98}>
-                <Avatar uri={creator.avatarUrl} size={36} bordered />
-                <View style={{ marginLeft: spacing.sm }}>
+                <Avatar uri={creator.avatarUrl} size={40} bordered />
+                <View style={styles.creatorTextWrap}>
                   <Text style={styles.creatorName}>{creator.name}</Text>
-                  <Text style={styles.creatorMeta}>{project.region}</Text>
+                  <Text style={styles.creatorMeta}>
+                    @{creator.handle} · {project.region}
+                  </Text>
                 </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.warmBrown} />
               </AnimatedPressable>
             </Link>
           )}
 
-          <Text style={styles.description}>{project.description}</Text>
+          <View style={styles.divider} />
 
-          <View style={styles.tagRow}>
-            <Text style={styles.tag}>{project.category}</Text>
-            {project.mediums.map((m) => (
-              <Text key={m} style={styles.tag}>
-                {m}
-              </Text>
-            ))}
-          </View>
+          {project.description.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>About this project</Text>
+              <Text style={styles.description}>{project.description}</Text>
+            </View>
+          )}
+
+          {project.categories.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Categories</Text>
+              <View style={styles.tagRow}>
+                {project.categories.map((c) => (
+                  <View key={c} style={styles.categoryTag}>
+                    <Ionicons name={iconForCategory(c)} size={12} color={colors.ink} />
+                    <Text style={styles.categoryTagLabel}>{c}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {project.mediums.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Mediums</Text>
+              <View style={styles.tagRow}>
+                {project.mediums.map((m) => (
+                  <View key={m} style={styles.mediumTag}>
+                    <Text style={styles.mediumTagLabel}>{capitalize(m)}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           <View style={styles.actionsRow}>
-            <AnimatedPressable style={styles.appreciateButton} onPress={toggleAppreciate} scaleTo={0.9}>
+            <AnimatedPressable
+              style={[styles.actionButton, appreciated && styles.actionButtonActive]}
+              onPress={toggleAppreciate}
+              scaleTo={0.94}
+            >
               <Animated.View style={heartStyle}>
                 <Ionicons
                   name={appreciated ? 'heart' : 'heart-outline'}
-                  size={19}
-                  color={appreciated ? colors.terracotta : colors.ink}
+                  size={18}
+                  color={appreciated ? colors.likhaYellow : colors.ink}
                 />
               </Animated.View>
-              <Text style={styles.appreciateLabel}>
-                {project.appreciations + (appreciated ? 1 : 0)} Appreciations
+              <Text style={[styles.actionLabel, appreciated && styles.actionLabelActive]}>
+                {project.appreciations} Appreciations
               </Text>
             </AnimatedPressable>
             <AnimatedPressable
-              style={styles.appreciateButton}
+              style={styles.actionButton}
               onPress={() => setCommentsVisible(true)}
-              scaleTo={0.9}
+              scaleTo={0.94}
             >
               <Ionicons name="chatbubble-outline" size={16} color={colors.ink} />
-              <Text style={styles.appreciateLabel}>{commentCount} Comments</Text>
+              <Text style={styles.actionLabel}>{project.commentCount} Comments</Text>
             </AnimatedPressable>
           </View>
         </View>
@@ -140,6 +212,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.canvas,
   },
+  loading: {
+    marginTop: spacing.xl,
+  },
   content: {
     padding: spacing.lg,
   },
@@ -151,6 +226,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: spacing.md,
+    backgroundColor: colors.softGray + '40',
+    borderRadius: radius.md,
+    padding: spacing.sm,
+  },
+  creatorTextWrap: {
+    flex: 1,
+    marginLeft: spacing.sm,
   },
   creatorName: {
     ...t.bodyMedium,
@@ -159,39 +241,82 @@ const styles = StyleSheet.create({
   creatorMeta: {
     ...t.caption,
     color: colors.warmBrown,
+    marginTop: 1,
+  },
+  divider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.softGray,
+    marginTop: spacing.lg,
+  },
+  section: {
+    marginTop: spacing.lg,
+  },
+  sectionLabel: {
+    ...t.label,
+    fontSize: 11,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colors.warmBrown,
+    marginBottom: spacing.sm,
   },
   description: {
     ...t.body,
     color: colors.ink,
-    marginTop: spacing.md,
   },
   tagRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: spacing.md,
     gap: spacing.xs,
   },
-  tag: {
+  categoryTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.likhaYellow + '33',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+  },
+  categoryTagLabel: {
     ...t.caption,
+    fontFamily: t.bodyMedium.fontFamily,
     color: colors.ink,
+  },
+  mediumTag: {
     borderWidth: 1,
     borderColor: colors.softGray,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+  },
+  mediumTagLabel: {
+    ...t.caption,
+    color: colors.warmBrown,
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: spacing.lg,
-    marginTop: spacing.lg,
+    gap: spacing.sm,
+    marginTop: spacing.xl,
   },
-  appreciateButton: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    backgroundColor: colors.white,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    ...shadow.sm,
   },
-  appreciateLabel: {
+  actionButtonActive: {
+    backgroundColor: colors.likhaYellow + '33',
+  },
+  actionLabel: {
     ...t.bodyMedium,
+    color: colors.ink,
+  },
+  actionLabelActive: {
+    fontFamily: t.h3.fontFamily,
     color: colors.ink,
   },
   backButton: {

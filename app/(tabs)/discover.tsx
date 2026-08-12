@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,9 +9,11 @@ import { FeaturedWorks } from '../../components/FeaturedWorks';
 import { FilterBar } from '../../components/FilterBar';
 import { MasonryGrid } from '../../components/MasonryGrid';
 import { AnimatedPressable } from '../../components/ui';
-import { categories, getCreatorById, getListingByProjectId, notifications, projects } from '../../constants/mock-data';
+import { categories, notifications } from '../../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
+import { useCreatorStore } from '../../store/creator-store';
 import { useMessageStore } from '../../store/message-store';
+import { useProjectStore } from '../../store/project-store';
 import type { Category } from '../../types';
 
 export default function DiscoverScreen() {
@@ -19,14 +21,27 @@ export default function DiscoverScreen() {
   const hasUnread = useMemo(() => notifications.some((n) => !n.read), []);
   const hasUnreadMessages = useMessageStore((s) => s.conversations.some((c) => !c.read));
 
+  const projectsById = useProjectStore((s) => s.projectsById);
+  const fetchFeed = useProjectStore((s) => s.fetchFeed);
+  const getCreator = useCreatorStore((s) => s.getCreator);
+
+  useEffect(() => {
+    fetchFeed();
+  }, [fetchFeed]);
+
+  const projects = useMemo(
+    () => Object.values(projectsById).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [projectsById],
+  );
+
   const filteredProjects = useMemo(
-    () => (category ? projects.filter((p) => p.category === category) : projects),
-    [category],
+    () => (category ? projects.filter((p) => p.categories.includes(category)) : projects),
+    [category, projects],
   );
 
   const featuredProjects = useMemo(
     () => [...projects].sort((a, b) => b.appreciations - a.appreciations).slice(0, 8),
-    [],
+    [projects],
   );
 
   return (
@@ -66,7 +81,7 @@ export default function DiscoverScreen() {
       <ScrollView contentContainerStyle={styles.list}>
         <FeaturedWorks
           projects={featuredProjects}
-          getCreator={getCreatorById}
+          getCreator={getCreator}
           onPressProject={(project) => router.push(`/project/${project.id}`)}
         />
 
@@ -74,8 +89,7 @@ export default function DiscoverScreen() {
         <View style={styles.gridWrap}>
           <MasonryGrid
             projects={filteredProjects}
-            getCreator={getCreatorById}
-            getListing={getListingByProjectId}
+            getCreator={getCreator}
             onPressProject={(project) => router.push(`/project/${project.id}`)}
           />
         </View>

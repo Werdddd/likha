@@ -1,22 +1,38 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MasonryGrid } from '../../components/MasonryGrid';
 import { ProfileHeader } from '../../components/ProfileHeader';
 import { AnimatedPressable, Button } from '../../components/ui';
-import { getCreatorById, getProjectsByCreator } from '../../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
+import { useCreatorStore } from '../../store/creator-store';
 import { useMessageStore } from '../../store/message-store';
+import { useProjectStore } from '../../store/project-store';
 
 export default function CreatorProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const creator = getCreatorById(id);
+  const creator = useCreatorStore((s) => s.getCreator(id));
+  const fetchCreators = useCreatorStore((s) => s.fetchByIds);
+  const fetchByCreator = useProjectStore((s) => s.fetchByCreator);
+  const projectsById = useProjectStore((s) => s.projectsById);
+  const creatorProjects = useMemo(
+    () =>
+      Object.values(projectsById)
+        .filter((p) => p.creatorId === id)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [projectsById, id],
+  );
   const [isFollowing, setIsFollowing] = useState(false);
   const insets = useSafeAreaInsets();
   const getOrCreateConversation = useMessageStore((s) => s.getOrCreateConversation);
+
+  useEffect(() => {
+    if (!creator) fetchCreators([id]);
+    fetchByCreator(id);
+  }, [id, creator, fetchCreators, fetchByCreator]);
 
   if (!creator) {
     return (
@@ -26,8 +42,6 @@ export default function CreatorProfileScreen() {
       </SafeAreaView>
     );
   }
-
-  const creatorProjects = getProjectsByCreator(creator.id);
 
   return (
     <SafeAreaView style={styles.screen}>

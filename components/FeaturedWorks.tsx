@@ -139,7 +139,7 @@ function FeaturedCard({
               {creator.handle}
             </Text>
             <Text style={styles.creatorRole} numberOfLines={1}>
-              {project.category}
+              {project.categories.join(' · ')}
             </Text>
           </View>
         </View>

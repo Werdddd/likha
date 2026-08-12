@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -22,10 +22,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { currentUser, getCreatorById } from '../constants/mock-data';
 import { colors, fonts, radius, shadow, spacing, type as t } from '../constants/theme';
 import { timeAgo } from '../lib/format';
 import { useCommentStore } from '../store/comment-store';
+import { useCreatorStore } from '../store/creator-store';
+import { useSessionStore } from '../store/session-store';
 import type { Comment } from '../types';
 import { AnimatedPressable, Avatar } from './ui';
 
@@ -35,15 +36,23 @@ interface CommentsSheetProps {
   projectId: string;
 }
 
+const EMPTY_COMMENTS: Comment[] = [];
+
 export function CommentsSheet({ visible, onClose, projectId }: CommentsSheetProps) {
   const { height: windowHeight } = useWindowDimensions();
-  const sheetHeight = useMemo(() => windowHeight * 0.55, [windowHeight]);
+  const sheetHeight = windowHeight * 0.55;
   const insets = useSafeAreaInsets();
 
-  const allComments = useCommentStore((s) => s.comments);
+  const currentUser = useSessionStore((s) => s.currentUser);
+  const commentList = useCommentStore((s) => s.commentsByProject[projectId] ?? EMPTY_COMMENTS);
+  const fetchComments = useCommentStore((s) => s.fetchComments);
   const addComment = useCommentStore((s) => s.addComment);
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (visible) fetchComments(projectId);
+  }, [visible, projectId, fetchComments]);
 
   const translateY = useSharedValue(sheetHeight);
   const backdropOpacity = useSharedValue(0);
@@ -82,14 +91,6 @@ export function CommentsSheet({ visible, onClose, projectId }: CommentsSheetProp
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: backdropOpacity.value,
   }));
-
-  const commentList = useMemo(
-    () =>
-      allComments
-        .filter((c) => c.projectId === projectId)
-        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-    [allComments, projectId],
-  );
 
   const handleSend = () => {
     const text = draft.trim();
@@ -168,7 +169,7 @@ function CommentRow({
   comment: Comment;
   onPressCreator: (creatorId: string) => void;
 }) {
-  const creator = getCreatorById(comment.creatorId);
+  const creator = useCreatorStore((s) => s.getCreator(comment.creatorId));
   if (!creator) return null;
 
   return (
