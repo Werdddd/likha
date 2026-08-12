@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,8 +22,18 @@ const options: Array<{ mode: ProfileMode; title: string; description: string }> 
 ];
 
 export default function OnboardingModeScreen() {
-  const profileMode = useSessionStore((s) => s.currentUser.profileMode);
+  const initialMode = useSessionStore((s) => s.currentUser.profileMode);
   const setProfileMode = useSessionStore((s) => s.setProfileMode);
+  const [selectedMode, setSelectedMode] = useState<ProfileMode>(initialMode);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleContinue = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    await setProfileMode(selectedMode);
+    setIsSubmitting(false);
+    router.push('/(auth)/onboarding-profile');
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -31,11 +42,11 @@ export default function OnboardingModeScreen() {
         <Text style={styles.subtitle}>You can change this anytime from your profile.</Text>
 
         {options.map((option) => {
-          const selected = profileMode === option.mode;
+          const selected = selectedMode === option.mode;
           return (
             <AnimatedPressable
               key={option.mode}
-              onPress={() => setProfileMode(option.mode)}
+              onPress={() => setSelectedMode(option.mode)}
               scaleTo={0.98}
               style={[styles.card, selected && styles.cardSelected]}
             >
@@ -47,7 +58,8 @@ export default function OnboardingModeScreen() {
 
         <Button
           label="Continue"
-          onPress={() => router.push('/(auth)/onboarding-profile')}
+          onPress={handleContinue}
+          disabled={isSubmitting}
           style={styles.continueButton}
         />
       </View>

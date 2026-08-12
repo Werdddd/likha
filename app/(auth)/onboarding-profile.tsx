@@ -14,9 +14,13 @@ export default function OnboardingProfileScreen() {
   const [bio, setBio] = useState('');
   const [region, setRegion] = useState<Region>('Manila');
   const [selectedCategories, setSelectedCategories] = useState<Category[]>(['Illustration']);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleFinish = () => {
-    completeOnboarding({ bio: bio.trim(), region, categories: selectedCategories, tags: [] });
+  const handleFinish = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    await completeOnboarding({ bio: bio.trim(), region, categories: selectedCategories, tags: [] });
+    setIsSubmitting(false);
     router.replace('/(tabs)/discover');
   };
 
@@ -55,7 +59,7 @@ export default function OnboardingProfileScreen() {
         <Button
           label="Finish Setup"
           onPress={handleFinish}
-          disabled={selectedCategories.length === 0}
+          disabled={selectedCategories.length === 0 || isSubmitting}
           style={styles.finishButton}
         />
       </ScrollView>

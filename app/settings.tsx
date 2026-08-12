@@ -18,8 +18,8 @@ export default function SettingsScreen() {
   const currentUser = useSessionStore((s) => s.currentUser);
   const logOut = useSessionStore((s) => s.logOut);
 
-  const handleLogOut = () => {
-    logOut();
+  const handleLogOut = async () => {
+    await logOut();
     router.replace('/');
   };
 

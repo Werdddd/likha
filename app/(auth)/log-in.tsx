@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable, Button, TextField } from '../../components/ui';
@@ -14,13 +14,20 @@ export default function LogInScreen() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const canSubmit = identifier.trim().length > 0 && password.length > 0;
+  const canSubmit = identifier.trim().length > 0 && password.length > 0 && !isSubmitting;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
-    logIn(identifier.trim());
-    router.replace('/(tabs)/discover');
+    setIsSubmitting(true);
+    const { error } = await logIn(identifier.trim(), password);
+    setIsSubmitting(false);
+    if (error) {
+      Alert.alert('Log in failed', error);
+      return;
+    }
+    router.replace('/');
   };
 
   return (

@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, AnimatedPressable, Button, MultiSelectField, SelectField, TextField } from '../components/ui';
 import { categories, regions } from '../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
+import { pickAndUploadImage } from '../lib/upload';
 import { useSessionStore } from '../store/session-store';
 import type { Category, ProfileMode, Region } from '../types';
 
@@ -21,9 +23,39 @@ export default function ProfileEditScreen() {
   const [region, setRegion] = useState<Region>(currentUser.region);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>(currentUser.categories);
   const [profileMode, setProfileMode] = useState<ProfileMode>(currentUser.profileMode);
+  const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl);
+  const [coverUrl, setCoverUrl] = useState(currentUser.coverUrl);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    updateProfile({ name: name.trim(), bio: bio.trim(), region, categories: selectedCategories, profileMode });
+  const handlePickAvatar = async () => {
+    setIsUploadingAvatar(true);
+    const url = await pickAndUploadImage('profile-media', currentUser.id, 'avatar');
+    setIsUploadingAvatar(false);
+    if (url) setAvatarUrl(url);
+  };
+
+  const handlePickCover = async () => {
+    setIsUploadingCover(true);
+    const url = await pickAndUploadImage('profile-media', currentUser.id, 'cover');
+    setIsUploadingCover(false);
+    if (url) setCoverUrl(url);
+  };
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    await updateProfile({
+      name: name.trim(),
+      bio: bio.trim(),
+      region,
+      categories: selectedCategories,
+      profileMode,
+      avatarUrl,
+      coverUrl,
+    });
+    setIsSaving(false);
     router.back();
   };
 
@@ -31,8 +63,32 @@ export default function ProfileEditScreen() {
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'Edit Profile' }} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <AnimatedPressable onPress={handlePickCover} scaleTo={0.98} style={styles.coverWrap}>
+          {coverUrl ? (
+            <Image source={{ uri: coverUrl }} style={styles.coverImage} contentFit="cover" />
+          ) : (
+            <View style={[styles.coverImage, styles.coverPlaceholder]} />
+          )}
+          <View style={styles.editBadge}>
+            {isUploadingCover ? (
+              <ActivityIndicator size="small" color={colors.ink} />
+            ) : (
+              <Ionicons name="camera-outline" size={14} color={colors.ink} />
+            )}
+          </View>
+        </AnimatedPressable>
+
         <View style={styles.avatarSection}>
-          <Avatar uri={currentUser.avatarUrl} size={88} bordered />
+          <AnimatedPressable onPress={handlePickAvatar} scaleTo={0.94} style={styles.avatarPressable}>
+            <Avatar uri={avatarUrl} size={88} bordered />
+            <View style={[styles.editBadge, styles.avatarEditBadge]}>
+              {isUploadingAvatar ? (
+                <ActivityIndicator size="small" color={colors.ink} />
+              ) : (
+                <Ionicons name="camera-outline" size={14} color={colors.ink} />
+              )}
+            </View>
+          </AnimatedPressable>
           <Text style={styles.avatarHint}>This photo is visible on your public profile</Text>
         </View>
 
@@ -91,7 +147,7 @@ export default function ProfileEditScreen() {
         <Button
           label="Save Changes"
           onPress={handleSave}
-          disabled={selectedCategories.length === 0}
+          disabled={selectedCategories.length === 0 || isSaving}
           style={styles.saveButton}
         />
       </ScrollView>
@@ -137,9 +193,41 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
   },
+  coverWrap: {
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+  },
+  coverImage: {
+    width: '100%',
+    height: 120,
+    backgroundColor: colors.softGray,
+  },
+  coverPlaceholder: {
+    backgroundColor: colors.softGray,
+  },
   avatarSection: {
     alignItems: 'center',
     marginBottom: spacing.lg,
+  },
+  avatarPressable: {
+    position: 'relative',
+  },
+  editBadge: {
+    position: 'absolute',
+    right: spacing.sm,
+    bottom: spacing.sm,
+    width: 28,
+    height: 28,
+    borderRadius: radius.pill,
+    backgroundColor: colors.likhaYellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.sm,
+  },
+  avatarEditBadge: {
+    right: -2,
+    bottom: -2,
   },
   avatarHint: {
     ...t.caption,

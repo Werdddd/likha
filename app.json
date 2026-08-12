@@ -25,7 +25,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Likha uses your photo library so you can upload an avatar, cover photo, and project or listing images."
+        }
+      ]
     ]
   }
 }
