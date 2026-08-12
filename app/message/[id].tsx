@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,27 +15,54 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, AnimatedPressable } from '../../components/ui';
-import { getCreatorById } from '../../constants/mock-data';
 import { colors, fonts, radius, spacing, type as t } from '../../constants/theme';
 import { timeAgo } from '../../lib/format';
+import { useCreatorStore } from '../../store/creator-store';
 import { useMessageStore } from '../../store/message-store';
-import type { Message } from '../../types';
+import type { Conversation, Message } from '../../types';
+
+const EMPTY_MESSAGES: Message[] = [];
 
 export default function MessageScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const conversation = useMessageStore((s) => s.conversations.find((c) => c.id === id));
+  const cachedConversation = useMessageStore((s) => s.conversations.find((c) => c.id === id));
+  const fetchConversationById = useMessageStore((s) => s.fetchConversationById);
+  const messages = useMessageStore((s) => s.messagesByConversation[id] ?? EMPTY_MESSAGES);
+  const fetchMessages = useMessageStore((s) => s.fetchMessages);
   const markRead = useMessageStore((s) => s.markRead);
   const sendMessage = useMessageStore((s) => s.sendMessage);
+  const subscribeToConversation = useMessageStore((s) => s.subscribeToConversation);
+
+  const [conversation, setConversation] = useState<Conversation | null | undefined>(cachedConversation);
+  const creator = useCreatorStore((s) => (conversation ? s.getCreator(conversation.creatorId) : undefined));
 
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    if (conversation && !conversation.read) markRead(conversation.id);
-  }, [conversation, markRead]);
+    if (cachedConversation) {
+      setConversation(cachedConversation);
+    } else {
+      fetchConversationById(id).then(setConversation);
+    }
+  }, [id, cachedConversation, fetchConversationById]);
 
-  const creator = conversation ? getCreatorById(conversation.creatorId) : undefined;
+  useEffect(() => {
+    fetchMessages(id);
+    markRead(id);
+    const unsubscribe = subscribeToConversation(id);
+    return unsubscribe;
+  }, [id, fetchMessages, markRead, subscribeToConversation]);
+
+  if (conversation === undefined) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <Stack.Screen options={{ title: 'Message' }} />
+        <ActivityIndicator style={styles.loading} color={colors.ink} />
+      </SafeAreaView>
+    );
+  }
 
   if (!conversation || !creator) {
     return (
@@ -44,11 +73,15 @@ export default function MessageScreen() {
     );
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const text = draft.trim();
     if (!text) return;
-    sendMessage(conversation.id, text);
     setDraft('');
+    const { error } = await sendMessage(conversation.id, text);
+    if (error) {
+      Alert.alert('Could not send message', error);
+      return;
+    }
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   };
 
@@ -79,14 +112,13 @@ export default function MessageScreen() {
           contentContainerStyle={styles.list}
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
         >
-          {conversation.messages.map((message, index) => (
+          {messages.map((message, index) => (
             <MessageBubble
               key={message.id}
               message={message}
               showTime={
                 index === 0 ||
-                new Date(message.createdAt).getTime() -
-                  new Date(conversation.messages[index - 1].createdAt).getTime() >
+                new Date(message.createdAt).getTime() - new Date(messages[index - 1].createdAt).getTime() >
                   1000 * 60 * 30
               }
             />
@@ -138,6 +170,9 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  loading: {
+    marginTop: spacing.xl,
   },
   notFound: {
     ...t.body,

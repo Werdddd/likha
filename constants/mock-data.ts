@@ -1,11 +1,9 @@
 import type {
   Category,
   Comment,
-  Conversation,
   Creator,
   DigitalCategory,
   Listing,
-  Notification,
   PhysicalCategory,
   Project,
   ProductCategory,
@@ -272,67 +270,6 @@ export const getListingByProjectId = (projectId: string): Listing | undefined =>
   listings.find((l) => l.projectId === projectId);
 
 export const currentUser: Creator = creators[0];
-
-export const notifications: Notification[] = [
-  { id: 'n1', kind: 'appreciation', creatorId: 'c2', projectId: 'p1', createdAt: new Date(2026, 7, 9, 8, 15).toISOString(), read: false },
-  { id: 'n2', kind: 'follow', creatorId: 'c5', createdAt: new Date(2026, 7, 8, 19, 40).toISOString(), read: false },
-  { id: 'n3', kind: 'comment', creatorId: 'c3', projectId: 'p2', createdAt: new Date(2026, 7, 8, 12, 5).toISOString(), read: false },
-  { id: 'n4', kind: 'appreciation', creatorId: 'c4', projectId: 'p1', createdAt: new Date(2026, 7, 7, 21, 30).toISOString(), read: true },
-  { id: 'n5', kind: 'follow', creatorId: 'c7', createdAt: new Date(2026, 7, 6, 9, 0).toISOString(), read: true },
-  { id: 'n6', kind: 'comment', creatorId: 'c6', projectId: 'p3', createdAt: new Date(2026, 7, 4, 16, 20).toISOString(), read: true },
-];
-
-export const conversations: Conversation[] = [
-  {
-    id: 'conv1',
-    creatorId: 'c2',
-    read: false,
-    messages: [
-      { id: 'conv1-m1', fromMe: false, text: 'Hey Mika! Loved the Buwan ng Wika series. Any chance you take on UI illustration commissions?', createdAt: new Date(2026, 7, 9, 9, 2).toISOString() },
-      { id: 'conv1-m2', fromMe: true, text: 'Thank you Julio! Yes, I do — what did you have in mind?', createdAt: new Date(2026, 7, 9, 9, 14).toISOString() },
-      { id: 'conv1-m3', fromMe: false, text: 'A set of empty-state illustrations for the Sari-Sari app, maybe 4-5 pieces.', createdAt: new Date(2026, 7, 9, 9, 16).toISOString() },
-      { id: 'conv1-m4', fromMe: false, text: 'Timeline would be about two weeks. Budget is flexible.', createdAt: new Date(2026, 7, 9, 9, 17).toISOString() },
-    ],
-  },
-  {
-    id: 'conv2',
-    creatorId: 'c5',
-    read: true,
-    messages: [
-      { id: 'conv2-m1', fromMe: true, text: 'Hi Trisha, the Banig Pattern Sticker Pack is gorgeous — did you design the pattern from scratch?', createdAt: new Date(2026, 7, 7, 14, 3).toISOString() },
-      { id: 'conv2-m2', fromMe: false, text: 'Thank you! Yes, based on a weave I sketched from a market visit in Iloilo.', createdAt: new Date(2026, 7, 7, 14, 20).toISOString() },
-      { id: 'conv2-m3', fromMe: false, text: 'Glad it caught your eye 🙂', createdAt: new Date(2026, 7, 7, 14, 21).toISOString() },
-    ],
-  },
-  {
-    id: 'conv3',
-    creatorId: 'c4',
-    read: true,
-    messages: [
-      { id: 'conv3-m1', fromMe: false, text: 'Saw your Jeepney Dreams project — would love to collab on a folklore x jeepney render sometime.', createdAt: new Date(2026, 7, 5, 11, 0).toISOString() },
-      { id: 'conv3-m2', fromMe: true, text: "That sounds fun, let's talk details closer to September.", createdAt: new Date(2026, 7, 5, 18, 45).toISOString() },
-    ],
-  },
-  {
-    id: 'conv4',
-    creatorId: 'c7',
-    read: true,
-    messages: [
-      { id: 'conv4-m1', fromMe: true, text: 'Nadine, do you write artist bios? Need one for an upcoming feature.', createdAt: new Date(2026, 7, 2, 10, 10).toISOString() },
-      { id: 'conv4-m2', fromMe: false, text: 'I do! Send me your project links and a few keywords and I can draft something this week.', createdAt: new Date(2026, 7, 2, 10, 40).toISOString() },
-    ],
-  },
-];
-
-export const getConversationById = (id: string): Conversation | undefined =>
-  conversations.find((c) => c.id === id);
-
-export const getConversationsSorted = (list: Conversation[] = conversations): Conversation[] =>
-  [...list].sort((a, b) => {
-    const aLast = a.messages[a.messages.length - 1]?.createdAt ?? '';
-    const bLast = b.messages[b.messages.length - 1]?.createdAt ?? '';
-    return bLast.localeCompare(aLast);
-  });
 
 export const comments: Comment[] = [
   { id: 'cm1', projectId: 'p1', creatorId: 'c2', text: 'The color palette in this series is stunning. What was your reference for the third piece?', createdAt: new Date(2026, 7, 8, 10, 12).toISOString() },

@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
+import { useEffect } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, AnimatedPressable } from '../components/ui';
-import { getCreatorById, getProjectById, notifications } from '../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
+import { useCreatorStore } from '../store/creator-store';
+import { useNotificationStore } from '../store/notification-store';
+import { useProjectStore } from '../store/project-store';
 import type { Notification, NotificationKind } from '../types';
 
 const VERB: Record<NotificationKind, string> = {
@@ -30,6 +33,25 @@ function timeAgo(iso: string) {
 }
 
 export default function NotificationsScreen() {
+  const notifications = useNotificationStore((s) => s.notifications);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+  const markAllRead = useNotificationStore((s) => s.markAllRead);
+  const fetchProjectById = useProjectStore((s) => s.fetchById);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    notifications.forEach((n) => {
+      if (n.projectId) fetchProjectById(n.projectId);
+    });
+  }, [notifications, fetchProjectById]);
+
+  useEffect(() => {
+    if (notifications.some((n) => !n.read)) markAllRead();
+  }, [notifications, markAllRead]);
+
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'Notifications' }} />
@@ -45,8 +67,10 @@ export default function NotificationsScreen() {
 }
 
 function NotificationRow({ notification }: { notification: Notification }) {
-  const creator = getCreatorById(notification.creatorId);
-  const project = notification.projectId ? getProjectById(notification.projectId) : undefined;
+  const creator = useCreatorStore((s) => s.getCreator(notification.creatorId));
+  const project = useProjectStore((s) =>
+    notification.projectId ? s.projectsById[notification.projectId] : undefined,
+  );
   if (!creator) return null;
 
   return (

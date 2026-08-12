@@ -1,20 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
+import { useEffect } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, AnimatedPressable } from '../components/ui';
-import { getConversationsSorted, getCreatorById } from '../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { timeAgo } from '../lib/format';
+import { useCreatorStore } from '../store/creator-store';
 import { useMessageStore } from '../store/message-store';
 import type { Conversation } from '../types';
 
 export default function MessagesScreen() {
   const conversations = useMessageStore((s) => s.conversations);
-  const sorted = getConversationsSorted(conversations);
+  const fetchConversations = useMessageStore((s) => s.fetchConversations);
 
-  if (sorted.length === 0) {
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  if (conversations.length === 0) {
     return (
       <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
         <Stack.Screen options={{ title: 'Messages' }} />
@@ -32,7 +37,7 @@ export default function MessagesScreen() {
       <Stack.Screen options={{ title: 'Messages' }} />
 
       <FlatList
-        data={sorted}
+        data={conversations}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => <ConversationRow conversation={item} />}
@@ -42,8 +47,8 @@ export default function MessagesScreen() {
 }
 
 function ConversationRow({ conversation }: { conversation: Conversation }) {
-  const creator = getCreatorById(conversation.creatorId);
-  const lastMessage = conversation.messages[conversation.messages.length - 1];
+  const creator = useCreatorStore((s) => s.getCreator(conversation.creatorId));
+  const lastMessage = conversation.lastMessage;
   if (!creator || !lastMessage) return null;
 
   return (

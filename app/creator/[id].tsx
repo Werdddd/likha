@@ -11,9 +11,11 @@ import { colors, radius, shadow, spacing, type as t } from '../../constants/them
 import { useCreatorStore } from '../../store/creator-store';
 import { useMessageStore } from '../../store/message-store';
 import { useProjectStore } from '../../store/project-store';
+import { useSessionStore } from '../../store/session-store';
 
 export default function CreatorProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const currentUserId = useSessionStore((s) => s.currentUser.id);
   const creator = useCreatorStore((s) => s.getCreator(id));
   const fetchCreators = useCreatorStore((s) => s.fetchByIds);
   const fetchByCreator = useProjectStore((s) => s.fetchByCreator);
@@ -34,6 +36,11 @@ export default function CreatorProfileScreen() {
     fetchByCreator(id);
   }, [id, creator, fetchCreators, fetchByCreator]);
 
+  const handleMessage = async () => {
+    const conversationId = await getOrCreateConversation(id);
+    if (conversationId) router.push(`/message/${conversationId}`);
+  };
+
   if (!creator) {
     return (
       <SafeAreaView style={styles.screen}>
@@ -51,18 +58,16 @@ export default function CreatorProfileScreen() {
           creator={creator}
           actions={
             <View style={styles.actionButtons}>
-              {creator.profileMode === 'open_for_work' && (
-                <Button
-                  label="Hire Me"
-                  onPress={() => router.push(`/message/${getOrCreateConversation(creator.id)}`)}
-                  style={styles.hireButton}
-                />
+              {creator.id !== currentUserId && (
+                <>
+                  <Button label="Message" onPress={handleMessage} style={styles.messageButton} />
+                  <Button
+                    label={isFollowing ? 'Following' : 'Follow'}
+                    variant={isFollowing ? 'ghost' : 'secondary'}
+                    onPress={() => setIsFollowing((v) => !v)}
+                  />
+                </>
               )}
-              <Button
-                label={isFollowing ? 'Following' : 'Follow'}
-                variant={isFollowing ? 'ghost' : 'secondary'}
-                onPress={() => setIsFollowing((v) => !v)}
-              />
             </View>
           }
         />
@@ -94,7 +99,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
-  hireButton: {
+  messageButton: {
     paddingHorizontal: spacing.md,
   },
   backButton: {

@@ -153,7 +153,7 @@ export interface Message {
 export interface Conversation {
   id: string;
   creatorId: string;
-  messages: Message[];
+  lastMessage?: Message;
   read: boolean;
 }
 

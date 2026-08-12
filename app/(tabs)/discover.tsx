@@ -9,17 +9,22 @@ import { FeaturedWorks } from '../../components/FeaturedWorks';
 import { FilterBar } from '../../components/FilterBar';
 import { MasonryGrid } from '../../components/MasonryGrid';
 import { AnimatedPressable } from '../../components/ui';
-import { categories, notifications } from '../../constants/mock-data';
+import { categories } from '../../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { useCreatorStore } from '../../store/creator-store';
 import { useMessageStore } from '../../store/message-store';
+import { useNotificationStore } from '../../store/notification-store';
 import { useProjectStore } from '../../store/project-store';
 import type { Category } from '../../types';
 
 export default function DiscoverScreen() {
   const [category, setCategory] = useState<Category | null>(null);
-  const hasUnread = useMemo(() => notifications.some((n) => !n.read), []);
-  const hasUnreadMessages = useMessageStore((s) => s.conversations.some((c) => !c.read));
+  const notifications = useNotificationStore((s) => s.notifications);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+  const hasUnread = useMemo(() => notifications.some((n) => !n.read), [notifications]);
+  const conversations = useMessageStore((s) => s.conversations);
+  const fetchConversations = useMessageStore((s) => s.fetchConversations);
+  const hasUnreadMessages = useMemo(() => conversations.some((c) => !c.read), [conversations]);
 
   const projectsById = useProjectStore((s) => s.projectsById);
   const fetchFeed = useProjectStore((s) => s.fetchFeed);
@@ -27,7 +32,9 @@ export default function DiscoverScreen() {
 
   useEffect(() => {
     fetchFeed();
-  }, [fetchFeed]);
+    fetchNotifications();
+    fetchConversations();
+  }, [fetchFeed, fetchNotifications, fetchConversations]);
 
   const projects = useMemo(
     () => Object.values(projectsById).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),

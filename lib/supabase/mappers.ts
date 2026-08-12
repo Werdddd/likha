@@ -2,8 +2,12 @@ import type {
   Address,
   Category,
   Comment,
+  Conversation,
   Creator,
   Listing,
+  Message,
+  Notification,
+  NotificationKind,
   Order,
   OrderStatus,
   PaymentMethod,
@@ -245,5 +249,67 @@ export function orderRowToOrder(row: OrderRow): Order {
     paymentMethod: row.payment_method as PaymentMethod,
     status: row.status as OrderStatus,
     createdAt: row.created_at,
+  };
+}
+
+export interface MessageRow {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  text: string;
+  created_at: string;
+}
+
+export function messageRowToMessage(row: MessageRow, myId: string): Message {
+  return {
+    id: row.id,
+    text: row.text,
+    fromMe: row.sender_id === myId,
+    createdAt: row.created_at,
+  };
+}
+
+export interface ConversationRow {
+  id: string;
+  user_a_id: string;
+  user_b_id: string;
+  user_a_last_read_at: string;
+  user_b_last_read_at: string;
+  last_message_at: string;
+  created_at: string;
+  messages?: MessageRow[];
+}
+
+export function conversationRowToConversation(row: ConversationRow, myId: string): Conversation {
+  const otherId = row.user_a_id === myId ? row.user_b_id : row.user_a_id;
+  const myLastReadAt = row.user_a_id === myId ? row.user_a_last_read_at : row.user_b_last_read_at;
+  const lastMessageRow = row.messages?.[0];
+
+  return {
+    id: row.id,
+    creatorId: otherId,
+    lastMessage: lastMessageRow ? messageRowToMessage(lastMessageRow, myId) : undefined,
+    read: !lastMessageRow || new Date(myLastReadAt) >= new Date(lastMessageRow.created_at),
+  };
+}
+
+export interface NotificationRow {
+  id: string;
+  recipient_id: string;
+  actor_id: string;
+  kind: string;
+  project_id: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+export function notificationRowToNotification(row: NotificationRow): Notification {
+  return {
+    id: row.id,
+    kind: row.kind as NotificationKind,
+    creatorId: row.actor_id,
+    projectId: row.project_id ?? undefined,
+    createdAt: row.created_at,
+    read: row.read,
   };
 }
