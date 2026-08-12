@@ -1,14 +1,16 @@
 import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Chip, SelectField, TextField } from '../components/ui';
-import { getListingById, regions } from '../constants/mock-data';
+import { regions } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
 import { formatPrice } from '../lib/format';
 import { useCartStore } from '../store/cart-store';
+import { useListingStore } from '../store/listing-store';
 import { useOrderStore } from '../store/order-store';
+import { useSessionStore } from '../store/session-store';
 import type { Address, OrderItem, PaymentMethod, Region } from '../types';
 
 const SHIPPING_FEE = 80;
@@ -23,6 +25,8 @@ export default function CheckoutScreen() {
   const items = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clear);
   const placeOrder = useOrderStore((s) => s.placeOrder);
+  const listingsById = useListingStore((s) => s.listingsById);
+  const currentUserId = useSessionStore((s) => s.currentUser.id);
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -31,12 +35,13 @@ export default function CheckoutScreen() {
   const [region, setRegion] = useState<Region>(regions[0]);
   const [postalCode, setPostalCode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const orderItems: OrderItem[] = useMemo(
     () =>
       items
         .map((item) => {
-          const listing = getListingById(item.listingId);
+          const listing = listingsById[item.listingId];
           if (!listing) return null;
           return {
             listingId: listing.id,
@@ -47,12 +52,12 @@ export default function CheckoutScreen() {
           };
         })
         .filter((line): line is OrderItem => line !== null),
-    [items],
+    [items, listingsById],
   );
 
   const requiresShipping = useMemo(
-    () => items.some((item) => getListingById(item.listingId)?.productType === 'physical'),
-    [items],
+    () => items.some((item) => listingsById[item.listingId]?.productType === 'physical'),
+    [items, listingsById],
   );
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -61,6 +66,7 @@ export default function CheckoutScreen() {
 
   const canSubmit =
     orderItems.length > 0 &&
+    !isSubmitting &&
     (!requiresShipping ||
       (fullName.trim().length > 0 &&
         phone.trim().length > 0 &&
@@ -68,26 +74,35 @@ export default function CheckoutScreen() {
         city.trim().length > 0 &&
         postalCode.trim().length > 0));
 
-  const handlePlaceOrder = () => {
-    const address: Address = {
-      fullName: fullName.trim(),
-      phone: phone.trim(),
-      line1: line1.trim(),
-      city: city.trim(),
-      region,
-      postalCode: postalCode.trim(),
-    };
+  const handlePlaceOrder = async () => {
+    if (!canSubmit) return;
 
-    placeOrder({
-      id: `o${Date.now()}`,
+    const address: Address | null = requiresShipping
+      ? {
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          line1: line1.trim(),
+          city: city.trim(),
+          region,
+          postalCode: postalCode.trim(),
+        }
+      : null;
+
+    setIsSubmitting(true);
+    const { order, error } = await placeOrder(currentUserId, {
       items: orderItems,
       subtotal,
       shippingFee,
       total,
       address,
       paymentMethod,
-      createdAt: new Date().toISOString(),
     });
+    setIsSubmitting(false);
+
+    if (!order) {
+      Alert.alert('Could not place order', error ?? 'Please try again.');
+      return;
+    }
     clearCart();
     router.replace('/order-confirmation');
   };

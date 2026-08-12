@@ -1,4 +1,6 @@
 import { decode } from 'base64-arraybuffer';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 
@@ -85,4 +87,40 @@ export async function pickAndUploadImages(
 
   const urls = await Promise.all(result.assets.map((asset) => uploadAsset(bucket, userId, prefix, asset)));
   return urls.filter((url): url is string => url !== null);
+}
+
+/**
+ * Opens the system file picker (any file type), uploads the selected file to a **private**
+ * bucket, and returns its storage path plus original filename. Returns null if the user cancels
+ * or the upload fails. Unlike the image helpers, this never returns a public URL — the bucket is
+ * meant to stay private (e.g. digital product files), gated by RLS to the owner.
+ */
+export async function pickAndUploadDocument(
+  bucket: string,
+  userId: string,
+  prefix: string,
+): Promise<{ path: string; fileName: string } | null> {
+  const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
+  const asset = result.canceled ? null : result.assets[0];
+  if (!asset) return null;
+
+  const extension = asset.name.includes('.') ? asset.name.split('.').pop() : 'bin';
+  const path = `${userId}/${prefix}-${Date.now()}.${extension}`;
+  const contentType = asset.mimeType ?? 'application/octet-stream';
+
+  const uploadBody = asset.file
+    ? asset.file
+    : decode(await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 }));
+
+  const { error } = await supabase.storage.from(bucket).upload(path, uploadBody, {
+    contentType,
+    upsert: true,
+  });
+
+  if (error) {
+    Alert.alert('Upload failed', error.message);
+    return null;
+  }
+
+  return { path, fileName: asset.name };
 }

@@ -90,6 +90,7 @@ export interface Listing {
   category: ProductCategory;
   tags: string[];
   stock: number | null;
+  digitalFileName?: string;
   createdAt: string;
 }
 
@@ -117,18 +118,19 @@ export interface OrderItem {
   quantity: number;
 }
 
+export type OrderStatus = 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
 export interface Order {
   id: string;
   items: OrderItem[];
   subtotal: number;
   shippingFee: number;
   total: number;
-  address: Address;
+  address: Address | null;
   paymentMethod: PaymentMethod;
+  status: OrderStatus;
   createdAt: string;
 }
-
-export type OrderStatus = 'processing' | 'shipped' | 'delivered';
 
 export type NotificationKind = 'appreciation' | 'follow' | 'comment';
 

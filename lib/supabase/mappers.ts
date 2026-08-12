@@ -1,4 +1,19 @@
-import type { Category, Comment, Creator, ProfileMode, Project, ProjectMedia, Region } from '../../types';
+import type {
+  Address,
+  Category,
+  Comment,
+  Creator,
+  Listing,
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  ProductCategory,
+  ProductType,
+  ProfileMode,
+  Project,
+  ProjectMedia,
+  Region,
+} from '../../types';
 
 export interface ProfileRow {
   id: string;
@@ -139,6 +154,96 @@ export function commentRowToComment(row: CommentRow): Comment {
     projectId: row.project_id,
     creatorId: row.creator_id,
     text: row.text,
+    createdAt: row.created_at,
+  };
+}
+
+export interface ListingImageRow {
+  id: string;
+  url: string;
+  position: number;
+}
+
+export interface ListingRow {
+  id: string;
+  creator_id: string;
+  project_id: string | null;
+  title: string;
+  description: string;
+  cover_url: string | null;
+  price: number | string;
+  product_type: string;
+  category: string;
+  tags: string[];
+  stock: number | null;
+  digital_file_path: string | null;
+  digital_file_name: string | null;
+  created_at: string;
+  profiles?: ProfileRow | null;
+  listing_images?: ListingImageRow[];
+}
+
+export function listingRowToListing(row: ListingRow): Listing {
+  const images = (row.listing_images ?? [])
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map((img) => img.url);
+
+  return {
+    id: row.id,
+    creatorId: row.creator_id,
+    projectId: row.project_id ?? undefined,
+    title: row.title,
+    description: row.description,
+    coverUrl: row.cover_url ?? images[0] ?? '',
+    images,
+    price: Number(row.price),
+    productType: row.product_type as ProductType,
+    category: row.category as ProductCategory,
+    tags: row.tags,
+    stock: row.stock,
+    digitalFileName: row.digital_file_name ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export interface OrderItemRow {
+  id: string;
+  listing_id: string | null;
+  title: string;
+  cover_url: string | null;
+  price: number | string;
+  quantity: number;
+}
+
+export interface OrderRow {
+  id: string;
+  subtotal: number | string;
+  shipping_fee: number | string;
+  total: number | string;
+  status: string;
+  payment_method: string;
+  address: Address | null;
+  created_at: string;
+  order_items?: OrderItemRow[];
+}
+
+export function orderRowToOrder(row: OrderRow): Order {
+  return {
+    id: row.id,
+    items: (row.order_items ?? []).map((item) => ({
+      listingId: item.listing_id ?? '',
+      title: item.title,
+      coverUrl: item.cover_url ?? '',
+      price: Number(item.price),
+      quantity: item.quantity,
+    })),
+    subtotal: Number(row.subtotal),
+    shippingFee: Number(row.shipping_fee),
+    total: Number(row.total),
+    address: row.address,
+    paymentMethod: row.payment_method as PaymentMethod,
+    status: row.status as OrderStatus,
     createdAt: row.created_at,
   };
 }

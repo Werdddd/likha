@@ -1,0 +1,129 @@
+import { create } from 'zustand';
+
+import { supabase } from '../lib/supabase/client';
+import { listingRowToListing, type ListingRow, type ProfileRow } from '../lib/supabase/mappers';
+import type { Listing, ProductCategory, ProductType } from '../types';
+import { useCreatorStore } from './creator-store';
+
+const LISTING_SELECT = '*, profiles!listings_creator_id_fkey(*), listing_images(*)';
+
+interface CreateListingInput {
+  title: string;
+  description: string;
+  price: number;
+  productType: ProductType;
+  category: ProductCategory;
+  tags: string[];
+  stock: number | null;
+  projectId?: string;
+  imageUrls: string[];
+  digitalFilePath?: string;
+  digitalFileName?: string;
+}
+
+interface ListingState {
+  listingsById: Record<string, Listing>;
+  isLoadingFeed: boolean;
+  fetchFeed: () => Promise<void>;
+  fetchByCreator: (creatorId: string) => Promise<Listing[]>;
+  fetchById: (id: string) => Promise<Listing | null>;
+  createListing: (
+    creatorId: string,
+    input: CreateListingInput,
+  ) => Promise<{ listing: Listing | null; error: string | null }>;
+}
+
+export const useListingStore = create<ListingState>((set, get) => {
+  const upsertRows = (rows: ListingRow[]) => {
+    const profiles = rows.map((r) => r.profiles).filter((p): p is ProfileRow => !!p);
+    useCreatorStore.getState().upsertFromRows(profiles);
+
+    set((state) => {
+      const next = { ...state.listingsById };
+      for (const row of rows) {
+        next[row.id] = listingRowToListing(row);
+      }
+      return { listingsById: next };
+    });
+  };
+
+  return {
+    listingsById: {},
+    isLoadingFeed: false,
+
+    fetchFeed: async () => {
+      set({ isLoadingFeed: true });
+      const { data, error } = await supabase
+        .from('listings')
+        .select(LISTING_SELECT)
+        .order('created_at', { ascending: false });
+      set({ isLoadingFeed: false });
+      if (error || !data) return;
+      upsertRows(data as ListingRow[]);
+    },
+
+    fetchByCreator: async (creatorId) => {
+      const { data, error } = await supabase
+        .from('listings')
+        .select(LISTING_SELECT)
+        .eq('creator_id', creatorId)
+        .order('created_at', { ascending: false });
+      if (error || !data) return [];
+      const rows = data as ListingRow[];
+      upsertRows(rows);
+      return rows.map(listingRowToListing);
+    },
+
+    fetchById: async (id) => {
+      const { data, error } = await supabase
+        .from('listings')
+        .select(LISTING_SELECT)
+        .eq('id', id)
+        .maybeSingle();
+      if (error || !data) return null;
+      const row = data as ListingRow;
+      upsertRows([row]);
+      return listingRowToListing(row);
+    },
+
+    createListing: async (creatorId, input) => {
+      const { data: listingData, error: listingError } = await supabase
+        .from('listings')
+        .insert({
+          creator_id: creatorId,
+          project_id: input.projectId ?? null,
+          title: input.title,
+          description: input.description,
+          price: input.price,
+          product_type: input.productType,
+          category: input.category,
+          tags: input.tags,
+          stock: input.stock,
+          digital_file_path: input.digitalFilePath ?? null,
+          digital_file_name: input.digitalFileName ?? null,
+          cover_url: input.imageUrls[0] ?? null,
+        })
+        .select()
+        .single();
+      if (listingError || !listingData) {
+        return { listing: null, error: listingError?.message ?? 'Could not create listing.' };
+      }
+
+      const listingRow = listingData as ListingRow;
+
+      if (input.imageUrls.length > 0) {
+        const { error: imagesError } = await supabase.from('listing_images').insert(
+          input.imageUrls.map((url, index) => ({
+            listing_id: listingRow.id,
+            url,
+            position: index,
+          })),
+        );
+        if (imagesError) return { listing: null, error: imagesError.message };
+      }
+
+      const listing = await get().fetchById(listingRow.id);
+      return { listing, error: listing ? null : 'Listing was created but could not be reloaded.' };
+    },
+  };
+});

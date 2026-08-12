@@ -9,7 +9,7 @@ import { formatPrice } from '../lib/format';
 import { useOrderStore } from '../store/order-store';
 
 export default function OrderConfirmationScreen() {
-  const order = useOrderStore((s) => s.orders[s.orders.length - 1]);
+  const order = useOrderStore((s) => s.orders[0]);
   const itemCount = order?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
   return (

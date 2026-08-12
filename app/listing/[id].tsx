@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView,
@@ -15,17 +16,25 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedPressable, Avatar, Button, QuantityStepper } from '../../components/ui';
-import { getCreatorById, getListingById, getProjectById } from '../../constants/mock-data';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { formatPrice } from '../../lib/format';
 import { useCartStore } from '../../store/cart-store';
+import { useCreatorStore } from '../../store/creator-store';
+import { useListingStore } from '../../store/listing-store';
+import { useProjectStore } from '../../store/project-store';
+import type { Listing, Project } from '../../types';
 
 export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const listing = getListingById(id);
-  const creator = listing ? getCreatorById(listing.creatorId) : undefined;
-  const linkedProject = listing?.projectId ? getProjectById(listing.projectId) : undefined;
+
+  const cachedListing = useListingStore((s) => s.listingsById[id]);
+  const fetchListingById = useListingStore((s) => s.fetchById);
+  const fetchProjectById = useProjectStore((s) => s.fetchById);
+  const creator = useCreatorStore((s) => (cachedListing ? s.getCreator(cachedListing.creatorId) : undefined));
   const addItem = useCartStore((s) => s.addItem);
+
+  const [listing, setListing] = useState<Listing | null | undefined>(cachedListing);
+  const [linkedProject, setLinkedProject] = useState<Project | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [page, setPage] = useState(0);
   const { width } = useWindowDimensions();
@@ -33,6 +42,22 @@ export default function ListingDetailScreen() {
 
   const heroOpacity = useSharedValue(0);
   const heroScale = useSharedValue(0.96);
+
+  useEffect(() => {
+    if (cachedListing) {
+      setListing(cachedListing);
+    } else {
+      fetchListingById(id).then(setListing);
+    }
+  }, [id, cachedListing, fetchListingById]);
+
+  useEffect(() => {
+    if (!listing?.projectId) {
+      setLinkedProject(null);
+      return;
+    }
+    fetchProjectById(listing.projectId).then(setLinkedProject);
+  }, [listing?.projectId, fetchProjectById]);
 
   useEffect(() => {
     heroOpacity.value = withTiming(1, { duration: 320 });
@@ -47,6 +72,15 @@ export default function ListingDetailScreen() {
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     setPage(Math.round(e.nativeEvent.contentOffset.x / width));
   };
+
+  if (listing === undefined) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <Stack.Screen options={{ title: 'Listing' }} />
+        <ActivityIndicator style={styles.loading} color={colors.ink} />
+      </SafeAreaView>
+    );
+  }
 
   if (!listing) {
     return (
@@ -129,7 +163,9 @@ export default function ListingDetailScreen() {
 
           <Text style={styles.stock}>
             {isDigital
-              ? 'Instant download after purchase'
+              ? listing.digitalFileName
+                ? `Instant download after purchase · ${listing.digitalFileName}`
+                : 'Instant download after purchase'
               : soldOut
                 ? 'Sold out'
                 : listing.stock === null
@@ -187,6 +223,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.canvas,
+  },
+  loading: {
+    marginTop: spacing.xl,
   },
   dots: {
     position: 'absolute',

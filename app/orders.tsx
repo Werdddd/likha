@@ -1,19 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable, Button } from '../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { formatPrice } from '../lib/format';
-import { getOrderStatus, orderStatusLabel } from '../lib/order-status';
+import { orderStatusLabel } from '../lib/order-status';
 import { useOrderStore } from '../store/order-store';
 
 export default function OrdersScreen() {
   const orders = useOrderStore((s) => s.orders);
-  const sorted = [...orders].reverse();
+  const fetchOrders = useOrderStore((s) => s.fetchOrders);
 
-  if (sorted.length === 0) {
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  if (orders.length === 0) {
     return (
       <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
         <Stack.Screen options={{ title: 'My Orders' }} />
@@ -31,9 +36,8 @@ export default function OrdersScreen() {
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'My Orders' }} />
       <View style={styles.list}>
-        {sorted.map((order) => {
+        {orders.map((order) => {
           const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-          const status = getOrderStatus(order.createdAt);
           return (
             <AnimatedPressable
               key={order.id}
@@ -44,7 +48,7 @@ export default function OrdersScreen() {
               <View style={styles.cardTop}>
                 <Text style={styles.orderDate}>{new Date(order.createdAt).toLocaleDateString()}</Text>
                 <View style={styles.statusBadge}>
-                  <Text style={styles.statusLabel}>{orderStatusLabel(status)}</Text>
+                  <Text style={styles.statusLabel}>{orderStatusLabel(order.status)}</Text>
                 </View>
               </View>
               <Text style={styles.orderMeta}>

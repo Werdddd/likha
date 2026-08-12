@@ -5,19 +5,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CartLineItem } from '../components/CartLineItem';
 import { Button } from '../components/ui';
-import { getCreatorById, getListingById } from '../constants/mock-data';
 import { colors, spacing, type as t } from '../constants/theme';
 import { formatPrice } from '../lib/format';
 import { useCartStore } from '../store/cart-store';
+import { useCreatorStore } from '../store/creator-store';
+import { useListingStore } from '../store/listing-store';
+import type { Listing } from '../types';
 
 export default function CartScreen() {
   const items = useCartStore((s) => s.items);
   const setQuantity = useCartStore((s) => s.setQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
+  const listingsById = useListingStore((s) => s.listingsById);
+  const getCreator = useCreatorStore((s) => s.getCreator);
 
   const lines = items
-    .map((item) => ({ item, listing: getListingById(item.listingId) }))
-    .filter((line): line is { item: (typeof items)[number]; listing: NonNullable<ReturnType<typeof getListingById>> } => !!line.listing);
+    .map((item) => ({ item, listing: listingsById[item.listingId] }))
+    .filter((line): line is { item: (typeof items)[number]; listing: Listing } => !!line.listing);
 
   const subtotal = lines.reduce((sum, { item, listing }) => sum + listing.price * item.quantity, 0);
 
@@ -44,7 +48,7 @@ export default function CartScreen() {
           <CartLineItem
             key={item.listingId}
             listing={listing}
-            creator={getCreatorById(listing.creatorId)}
+            creator={getCreator(listing.creatorId)}
             quantity={item.quantity}
             onChangeQuantity={(quantity) => setQuantity(item.listingId, quantity)}
             onRemove={() => removeItem(item.listingId)}

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,9 +8,11 @@ import { FilterBar } from '../../components/FilterBar';
 import { ListingGrid } from '../../components/ListingGrid';
 import { ProductTypeFilterSheet } from '../../components/ProductTypeFilterSheet';
 import { AnimatedPressable, TextField } from '../../components/ui';
-import { digitalCategories, getCreatorById, listings, physicalCategories } from '../../constants/mock-data';
+import { digitalCategories, physicalCategories } from '../../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../../constants/theme';
 import { useCartStore } from '../../store/cart-store';
+import { useCreatorStore } from '../../store/creator-store';
+import { useListingStore } from '../../store/listing-store';
 import type { ProductCategory, ProductType } from '../../types';
 
 const PRODUCT_TYPE_FILTERS: Array<{ value: ProductType; label: string }> = [
@@ -24,6 +26,19 @@ export default function ShopScreen() {
   const [query, setQuery] = useState('');
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const cartCount = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0));
+
+  const listingsById = useListingStore((s) => s.listingsById);
+  const fetchFeed = useListingStore((s) => s.fetchFeed);
+  const getCreator = useCreatorStore((s) => s.getCreator);
+
+  useEffect(() => {
+    fetchFeed();
+  }, [fetchFeed]);
+
+  const listings = useMemo(
+    () => Object.values(listingsById).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [listingsById],
+  );
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -49,7 +64,7 @@ export default function ShopScreen() {
           l.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery));
         return matchesType && matchesCategory && matchesQuery;
       }),
-    [productType, category, normalizedQuery],
+    [listings, productType, category, normalizedQuery],
   );
 
   return (
@@ -106,7 +121,7 @@ export default function ShopScreen() {
         <View style={styles.gridWrap}>
           <ListingGrid
             listings={filteredListings}
-            getCreator={getCreatorById}
+            getCreator={getCreator}
             onPressListing={(listing) => router.push(`/listing/${listing.id}`)}
             emptyLabel="No listings in this category yet."
           />
