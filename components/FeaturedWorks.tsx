@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
+import { useCreatorStore } from '../store/creator-store';
+import { useSessionStore } from '../store/session-store';
 import type { Creator, Project } from '../types';
 import { AnimatedPressable } from './ui/AnimatedPressable';
 import { Avatar } from './ui/Avatar';
@@ -28,16 +30,38 @@ const CARD_GAP = spacing.sm;
 const PHOTO_INTERVAL = 3000;
 
 export function FeaturedWorks({ projects, getCreator, onPressProject }: FeaturedWorksProps) {
+  const currentUserId = useSessionStore((s) => s.currentUser.id);
+  const fetchFollowingSet = useCreatorStore((s) => s.fetchFollowingSet);
+  const followCreator = useCreatorStore((s) => s.follow);
+  const unfollowCreator = useCreatorStore((s) => s.unfollow);
   const [followed, setFollowed] = useState<Set<string>>(new Set());
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const toggleFollow = useCallback((id: string) => {
-    setFollowed((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }, []);
+  const creatorIds = [...new Set(projects.map((p) => p.creatorId))].join(',');
+
+  useEffect(() => {
+    if (!currentUserId || !creatorIds) return;
+    const ids = creatorIds.split(',').filter((cid) => cid !== currentUserId);
+    if (ids.length === 0) return;
+    fetchFollowingSet(currentUserId, ids).then(setFollowed);
+  }, [currentUserId, creatorIds, fetchFollowingSet]);
+
+  const toggleFollow = useCallback(
+    async (creatorId: string) => {
+      if (!currentUserId || creatorId === currentUserId) return;
+      const isFollowing = followed.has(creatorId);
+
+      setFollowed((prev) => {
+        const next = new Set(prev);
+        isFollowing ? next.delete(creatorId) : next.add(creatorId);
+        return next;
+      });
+
+      if (isFollowing) await unfollowCreator(currentUserId, creatorId);
+      else await followCreator(currentUserId, creatorId);
+    },
+    [currentUserId, followed, followCreator, unfollowCreator],
+  );
 
   const onMomentumScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -72,6 +96,7 @@ export function FeaturedWorks({ projects, getCreator, onPressProject }: Featured
               creator={creator}
               following={followed.has(creator.id)}
               onToggleFollow={() => toggleFollow(creator.id)}
+              isOwnCard={creator.id === currentUserId}
               onPress={() => onPressProject?.(item)}
               total={projects.length}
               activeIndex={activeIndex}
@@ -104,6 +129,7 @@ interface FeaturedCardProps {
   creator: Creator;
   following: boolean;
   onToggleFollow: () => void;
+  isOwnCard: boolean;
   onPress?: () => void;
   total: number;
   activeIndex: number;
@@ -115,6 +141,7 @@ function FeaturedCard({
   creator,
   following,
   onToggleFollow,
+  isOwnCard,
   onPress,
   total,
   activeIndex,
@@ -144,9 +171,11 @@ function FeaturedCard({
           </View>
         </View>
 
-        <AnimatedPressable style={styles.followButton} onPress={onToggleFollow} scaleTo={0.92}>
-          <Text style={styles.followButtonLabel}>{following ? 'Following' : 'Follow'}</Text>
-        </AnimatedPressable>
+        {!isOwnCard && (
+          <AnimatedPressable style={styles.followButton} onPress={onToggleFollow} scaleTo={0.92}>
+            <Text style={styles.followButtonLabel}>{following ? 'Following' : 'Follow'}</Text>
+          </AnimatedPressable>
+        )}
       </View>
 
       <View style={styles.cardBottom}>

@@ -10,6 +10,10 @@ interface CreatorState {
   fetchByIds: (ids: string[]) => Promise<void>;
   getCreator: (id: string) => Creator | undefined;
   searchCreators: (query: string, filters?: { category?: Category | null; region?: Region | null }) => Promise<Creator[]>;
+  isFollowing: (followerId: string, followeeId: string) => Promise<boolean>;
+  fetchFollowingSet: (followerId: string, followeeIds: string[]) => Promise<Set<string>>;
+  follow: (followerId: string, followeeId: string) => Promise<{ error: string | null }>;
+  unfollow: (followerId: string, followeeId: string) => Promise<{ error: string | null }>;
 }
 
 export const useCreatorStore = create<CreatorState>((set, get) => ({
@@ -55,5 +59,72 @@ export const useCreatorStore = create<CreatorState>((set, get) => ({
     const rows = data as ProfileRow[];
     get().upsertFromRows(rows);
     return rows.map(profileRowToCreator);
+  },
+
+  isFollowing: async (followerId, followeeId) => {
+    const { data } = await supabase
+      .from('follows')
+      .select('follower_id')
+      .eq('follower_id', followerId)
+      .eq('followee_id', followeeId)
+      .maybeSingle();
+    return !!data;
+  },
+
+  fetchFollowingSet: async (followerId, followeeIds) => {
+    const ids = [...new Set(followeeIds)];
+    if (ids.length === 0) return new Set();
+
+    const { data, error } = await supabase
+      .from('follows')
+      .select('followee_id')
+      .eq('follower_id', followerId)
+      .in('followee_id', ids);
+    if (error || !data) return new Set();
+    return new Set(data.map((row) => row.followee_id as string));
+  },
+
+  follow: async (followerId, followeeId) => {
+    const { error } = await supabase.from('follows').insert({ follower_id: followerId, followee_id: followeeId });
+    if (error) return { error: error.message };
+
+    set((state) => {
+      const next = { ...state.creatorsById };
+      if (next[followeeId]) {
+        next[followeeId] = { ...next[followeeId], followerCount: next[followeeId].followerCount + 1 };
+      }
+      if (next[followerId]) {
+        next[followerId] = { ...next[followerId], followingCount: next[followerId].followingCount + 1 };
+      }
+      return { creatorsById: next };
+    });
+    return { error: null };
+  },
+
+  unfollow: async (followerId, followeeId) => {
+    const { error } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', followerId)
+      .eq('followee_id', followeeId);
+    if (error) return { error: error.message };
+
+    set((state) => {
+      const next = { ...state.creatorsById };
+      if (next[followeeId]) {
+        next[followeeId] = {
+          ...next[followeeId],
+          followerCount: Math.max(next[followeeId].followerCount - 1, 0),
+        };
+      }
+      if (next[followerId]) {
+        next[followerId] = {
+          ...next[followerId],
+          followingCount: Math.max(next[followerId].followingCount - 1, 0),
+        };
+      }
+      return { creatorsById: next };
+    });
+    return { error: null };
   },
 }));

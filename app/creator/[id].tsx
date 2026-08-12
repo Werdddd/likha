@@ -18,6 +18,9 @@ export default function CreatorProfileScreen() {
   const currentUserId = useSessionStore((s) => s.currentUser.id);
   const creator = useCreatorStore((s) => s.getCreator(id));
   const fetchCreators = useCreatorStore((s) => s.fetchByIds);
+  const checkIsFollowing = useCreatorStore((s) => s.isFollowing);
+  const followCreator = useCreatorStore((s) => s.follow);
+  const unfollowCreator = useCreatorStore((s) => s.unfollow);
   const fetchByCreator = useProjectStore((s) => s.fetchByCreator);
   const projectsById = useProjectStore((s) => s.projectsById);
   const creatorProjects = useMemo(
@@ -36,9 +39,25 @@ export default function CreatorProfileScreen() {
     fetchByCreator(id);
   }, [id, creator, fetchCreators, fetchByCreator]);
 
+  useEffect(() => {
+    if (!currentUserId || currentUserId === id) return;
+    checkIsFollowing(currentUserId, id).then(setIsFollowing);
+  }, [currentUserId, id, checkIsFollowing]);
+
   const handleMessage = async () => {
     const conversationId = await getOrCreateConversation(id);
     if (conversationId) router.push(`/message/${conversationId}`);
+  };
+
+  const handleToggleFollow = async () => {
+    if (!currentUserId) return;
+    if (isFollowing) {
+      setIsFollowing(false);
+      await unfollowCreator(currentUserId, id);
+    } else {
+      setIsFollowing(true);
+      await followCreator(currentUserId, id);
+    }
   };
 
   if (!creator) {
@@ -64,7 +83,7 @@ export default function CreatorProfileScreen() {
                   <Button
                     label={isFollowing ? 'Following' : 'Follow'}
                     variant={isFollowing ? 'ghost' : 'secondary'}
-                    onPress={() => setIsFollowing((v) => !v)}
+                    onPress={handleToggleFollow}
                   />
                 </>
               )}
