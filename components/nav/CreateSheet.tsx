@@ -56,6 +56,7 @@ export function CreateSheet({ visible, onClose }: CreateSheetProps) {
   const tiles: Tile[] = [
     { key: 'project', label: 'Post a Project', icon: 'sparkles-outline', onPress: () => go('/project/new') },
     { key: 'product', label: 'Add a Product', icon: 'bag-outline', onPress: () => go('/listing/new') },
+    { key: 'job_post', label: 'Post a Job', icon: 'briefcase-outline', onPress: () => go('/job-post/new') },
   ];
 
   return (

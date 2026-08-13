@@ -68,6 +68,12 @@ export default function RootLayout() {
         <Stack.Screen name="profile-edit" options={{ presentation: 'modal' }} />
         <Stack.Screen name="settings" />
         <Stack.Screen name="creator-order/[id]" />
+        <Stack.Screen name="job-post/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="job-post/[id]" />
+        <Stack.Screen name="job-post/[id]/offer" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="my-job-posts" />
+        <Stack.Screen name="my-offers" />
+        <Stack.Screen name="job-order/[id]" />
       </Stack>
     </GestureHandlerRootView>
   );

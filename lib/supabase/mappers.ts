@@ -5,8 +5,18 @@ import type {
   Conversation,
   Creator,
   CreatorOrder,
+  JobOffer,
+  JobOfferStatus,
+  JobOrder,
+  JobOrderMilestone,
+  JobOrderStatus,
+  JobPost,
+  JobPostComment,
+  JobPostStatus,
   Listing,
   Message,
+  MilestoneKind,
+  MilestoneStatus,
   Notification,
   NotificationKind,
   Order,
@@ -377,5 +387,155 @@ export function notificationRowToNotification(row: NotificationRow): Notificatio
     projectId: row.project_id ?? undefined,
     createdAt: row.created_at,
     read: row.read,
+  };
+}
+
+export interface JobPostImageRow {
+  id: string;
+  url: string;
+  position: number;
+}
+
+export interface JobPostRow {
+  id: string;
+  buyer_id: string;
+  title: string;
+  description: string;
+  category: string;
+  budget_min: number | string | null;
+  budget_max: number | string | null;
+  budget_flexible: boolean;
+  deadline: string | null;
+  deliverable_type: string;
+  region: string | null;
+  status: string;
+  offer_count: number;
+  comment_count: number;
+  created_at: string;
+  profiles?: ProfileRow | null;
+  job_post_images?: JobPostImageRow[];
+}
+
+export function jobPostRowToJobPost(row: JobPostRow): JobPost {
+  const images = (row.job_post_images ?? [])
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map((img) => img.url);
+
+  return {
+    id: row.id,
+    buyerId: row.buyer_id,
+    title: row.title,
+    description: row.description,
+    category: row.category as Category,
+    budgetMin: row.budget_min === null ? null : Number(row.budget_min),
+    budgetMax: row.budget_max === null ? null : Number(row.budget_max),
+    budgetFlexible: row.budget_flexible,
+    deadline: row.deadline,
+    deliverableType: row.deliverable_type as ProductType,
+    region: (row.region as Region) ?? null,
+    images,
+    status: row.status as JobPostStatus,
+    offerCount: row.offer_count,
+    commentCount: row.comment_count,
+    createdAt: row.created_at,
+  };
+}
+
+export interface JobOfferRow {
+  id: string;
+  job_post_id: string;
+  creator_id: string;
+  price: number | string;
+  turnaround_days: number;
+  pitch: string;
+  portfolio_project_id: string | null;
+  status: string;
+  created_at: string;
+}
+
+export function jobOfferRowToJobOffer(row: JobOfferRow): JobOffer {
+  return {
+    id: row.id,
+    jobPostId: row.job_post_id,
+    creatorId: row.creator_id,
+    price: Number(row.price),
+    turnaroundDays: row.turnaround_days,
+    pitch: row.pitch,
+    portfolioProjectId: row.portfolio_project_id ?? undefined,
+    status: row.status as JobOfferStatus,
+    createdAt: row.created_at,
+  };
+}
+
+export interface JobPostCommentRow {
+  id: string;
+  job_post_id: string;
+  creator_id: string;
+  text: string;
+  created_at: string;
+}
+
+export function jobPostCommentRowToComment(row: JobPostCommentRow): JobPostComment {
+  return {
+    id: row.id,
+    jobPostId: row.job_post_id,
+    creatorId: row.creator_id,
+    text: row.text,
+    createdAt: row.created_at,
+  };
+}
+
+export interface JobOrderMilestoneRow {
+  id: string;
+  job_order_id: string;
+  kind: string;
+  amount: number | string;
+  status: string;
+  payment_proof_path: string | null;
+}
+
+export function jobOrderMilestoneRowToMilestone(row: JobOrderMilestoneRow): JobOrderMilestone {
+  return {
+    id: row.id,
+    jobOrderId: row.job_order_id,
+    kind: row.kind as MilestoneKind,
+    amount: Number(row.amount),
+    status: row.status as MilestoneStatus,
+    paymentProofPath: row.payment_proof_path,
+  };
+}
+
+export interface JobOrderRow {
+  id: string;
+  job_post_id: string;
+  offer_id: string;
+  buyer_id: string;
+  creator_id: string;
+  price: number | string;
+  deliverable_type: string;
+  address: Address | null;
+  status: string;
+  final_file_path: string | null;
+  final_file_name: string | null;
+  created_at: string;
+  job_order_milestones?: JobOrderMilestoneRow[];
+}
+
+export function jobOrderRowToJobOrder(row: JobOrderRow): JobOrder {
+  return {
+    id: row.id,
+    jobPostId: row.job_post_id,
+    offerId: row.offer_id,
+    buyerId: row.buyer_id,
+    creatorId: row.creator_id,
+    price: Number(row.price),
+    deliverableType: row.deliverable_type as ProductType,
+    address: row.address,
+    status: row.status as JobOrderStatus,
+    finalFilePath: row.final_file_path,
+    finalFileName: row.final_file_name,
+    milestones: (row.job_order_milestones ?? []).map(jobOrderMilestoneRowToMilestone),
+    createdAt: row.created_at,
   };
 }

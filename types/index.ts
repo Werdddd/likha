@@ -200,3 +200,76 @@ export interface Comment {
   text: string;
   createdAt: string;
 }
+
+export type JobPostStatus = 'open' | 'fulfilled' | 'cancelled';
+
+export interface JobPost {
+  id: string;
+  buyerId: string;
+  title: string;
+  description: string;
+  category: Category;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  budgetFlexible: boolean;
+  deadline: string | null;
+  deliverableType: ProductType;
+  region: Region | null;
+  images: string[];
+  status: JobPostStatus;
+  offerCount: number;
+  commentCount: number;
+  createdAt: string;
+}
+
+export type JobOfferStatus = 'pending' | 'accepted' | 'not_selected' | 'withdrawn';
+
+export interface JobOffer {
+  id: string;
+  jobPostId: string;
+  creatorId: string;
+  price: number;
+  turnaroundDays: number;
+  pitch: string;
+  portfolioProjectId?: string;
+  status: JobOfferStatus;
+  createdAt: string;
+}
+
+export interface JobPostComment {
+  id: string;
+  jobPostId: string;
+  creatorId: string;
+  text: string;
+  createdAt: string;
+}
+
+export type MilestoneKind = 'deposit' | 'final';
+export type MilestoneStatus = 'pending' | 'paid' | 'released';
+
+export interface JobOrderMilestone {
+  id: string;
+  jobOrderId: string;
+  kind: MilestoneKind;
+  amount: number;
+  status: MilestoneStatus;
+  paymentProofPath: string | null;
+}
+
+export type JobOrderStatus = 'deposit_pending' | 'in_progress' | 'revision' | 'delivered' | 'completed' | 'cancelled';
+
+export interface JobOrder {
+  id: string;
+  jobPostId: string;
+  offerId: string;
+  buyerId: string;
+  creatorId: string;
+  price: number;
+  deliverableType: ProductType;
+  address: Address | null;
+  status: JobOrderStatus;
+  finalFilePath: string | null;
+  finalFileName: string | null;
+  milestones: JobOrderMilestone[];
+  createdAt: string;
+}
