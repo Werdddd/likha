@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable, Button } from '../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { useJobPostStore } from '../store/job-post-store';
 import { useSessionStore } from '../store/session-store';
+import type { JobPost } from '../types';
 
 const STATUS_LABELS: Record<string, string> = {
   open: 'Open',
@@ -19,7 +20,9 @@ export default function MyJobPostsScreen() {
   const currentUserId = useSessionStore((s) => s.currentUser.id);
   const jobPostsById = useJobPostStore((s) => s.jobPostsById);
   const fetchMyJobPosts = useJobPostStore((s) => s.fetchMyJobPosts);
+  const cancelJobPost = useJobPostStore((s) => s.cancelJobPost);
   const [refreshing, setRefreshing] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUserId) fetchMyJobPosts(currentUserId);
@@ -35,6 +38,26 @@ export default function MyJobPostsScreen() {
   const myJobPosts = Object.values(jobPostsById)
     .filter((jp) => jp.buyerId === currentUserId)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  const handleCancel = (jobPost: JobPost) => {
+    Alert.alert(
+      'Cancel this job post?',
+      'Creators will no longer be able to submit offers.',
+      [
+        { text: 'Keep it', style: 'cancel' },
+        {
+          text: 'Cancel Post',
+          style: 'destructive',
+          onPress: async () => {
+            setCancellingId(jobPost.id);
+            const { error } = await cancelJobPost(jobPost.id);
+            setCancellingId(null);
+            if (error) Alert.alert('Could not cancel this job post', error);
+          },
+        },
+      ],
+    );
+  };
 
   if (myJobPosts.length === 0) {
     return (
@@ -61,25 +84,31 @@ export default function MyJobPostsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
       >
         {myJobPosts.map((jobPost) => (
-          <AnimatedPressable
-            key={jobPost.id}
-            style={styles.card}
-            onPress={() => router.push(`/job-post/${jobPost.id}`)}
-            scaleTo={0.98}
-          >
-            <View style={styles.cardTop}>
-              <Text style={styles.postDate}>{new Date(jobPost.createdAt).toLocaleDateString()}</Text>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusLabel}>{STATUS_LABELS[jobPost.status]}</Text>
+          <View key={jobPost.id} style={styles.card}>
+            <AnimatedPressable onPress={() => router.push(`/job-post/${jobPost.id}`)} scaleTo={0.98}>
+              <View style={styles.cardTop}>
+                <Text style={styles.postDate}>{new Date(jobPost.createdAt).toLocaleDateString()}</Text>
+                <View style={styles.statusBadge}>
+                  <Text style={styles.statusLabel}>{STATUS_LABELS[jobPost.status]}</Text>
+                </View>
               </View>
-            </View>
-            <Text style={styles.postTitle} numberOfLines={1}>
-              {jobPost.title}
-            </Text>
-            <Text style={styles.postMeta}>
-              {jobPost.offerCount} offer{jobPost.offerCount === 1 ? '' : 's'} · {jobPost.category}
-            </Text>
-          </AnimatedPressable>
+              <Text style={styles.postTitle} numberOfLines={1}>
+                {jobPost.title}
+              </Text>
+              <Text style={styles.postMeta}>
+                {jobPost.offerCount} offer{jobPost.offerCount === 1 ? '' : 's'} · {jobPost.category}
+              </Text>
+            </AnimatedPressable>
+            {jobPost.status === 'open' && (
+              <Button
+                label={cancellingId === jobPost.id ? 'Cancelling…' : 'Cancel Job Post'}
+                variant="ghost"
+                onPress={() => handleCancel(jobPost)}
+                disabled={cancellingId === jobPost.id}
+                style={styles.cancelButton}
+              />
+            )}
+          </View>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -130,6 +159,9 @@ const styles = StyleSheet.create({
     ...t.caption,
     color: colors.warmBrown,
     marginTop: 2,
+  },
+  cancelButton: {
+    marginTop: spacing.sm,
   },
   empty: {
     flex: 1,

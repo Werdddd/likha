@@ -5,36 +5,62 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FilterBar } from '../../components/FilterBar';
+import { JobFilterSheet } from '../../components/JobFilterSheet';
 import { JobPostCard } from '../../components/JobPostCard';
 import { AnimatedPressable } from '../../components/ui';
-import { categories } from '../../constants/mock-data';
+import { categories, regions } from '../../constants/mock-data';
 import { colors, spacing, type as t } from '../../constants/theme';
 import { useJobPostStore } from '../../store/job-post-store';
-import type { Category } from '../../types';
+import type { Category, Region } from '../../types';
 
 export default function JobPostsScreen() {
   const [category, setCategory] = useState<Category | null>(null);
+  const [region, setRegion] = useState<Region | null>(null);
+  const [maxBudget, setMaxBudget] = useState('');
+  const [deadlineBefore, setDeadlineBefore] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const jobPostsById = useJobPostStore((s) => s.jobPostsById);
   const isLoadingFeed = useJobPostStore((s) => s.isLoadingFeed);
   const fetchFeed = useJobPostStore((s) => s.fetchFeed);
 
+  const maxBudgetValue = maxBudget.trim().length > 0 ? Number(maxBudget) : undefined;
+  const deadlineBeforeValue = deadlineBefore.trim().length > 0 ? deadlineBefore.trim() : undefined;
+  const hasMoreFilters = region !== null || maxBudgetValue !== undefined || deadlineBeforeValue !== undefined;
+
   useEffect(() => {
-    fetchFeed();
-  }, [fetchFeed]);
+    fetchFeed({
+      category: category ?? undefined,
+      region: region ?? undefined,
+      maxBudget: maxBudgetValue,
+      deadlineBefore: deadlineBeforeValue,
+    });
+  }, [fetchFeed, category, region, maxBudgetValue, deadlineBeforeValue]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchFeed();
+    await fetchFeed({
+      category: category ?? undefined,
+      region: region ?? undefined,
+      maxBudget: maxBudgetValue,
+      deadlineBefore: deadlineBeforeValue,
+    });
     setRefreshing(false);
-  }, [fetchFeed]);
+  }, [fetchFeed, category, region, maxBudgetValue, deadlineBeforeValue]);
 
   const jobPosts = useMemo(
     () =>
       Object.values(jobPostsById)
-        .filter((jp) => jp.status === 'open' && (!category || jp.category === category))
+        .filter((jp) => {
+          if (jp.status !== 'open') return false;
+          if (category && jp.category !== category) return false;
+          if (region && jp.region !== region) return false;
+          if (maxBudgetValue !== undefined && !(jp.budgetMin !== null && jp.budgetMin <= maxBudgetValue)) return false;
+          if (deadlineBeforeValue && !(jp.deadline !== null && jp.deadline <= deadlineBeforeValue)) return false;
+          return true;
+        })
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [jobPostsById, category],
+    [jobPostsById, category, region, maxBudgetValue, deadlineBeforeValue],
   );
 
   return (
@@ -56,6 +82,10 @@ export default function JobPostsScreen() {
 
       <View style={styles.filterBar}>
         <FilterBar options={categories} selected={category} onSelect={(v) => setCategory(v as Category | null)} />
+        <AnimatedPressable style={styles.moreFiltersButton} onPress={() => setFiltersOpen(true)} scaleTo={0.92}>
+          <Ionicons name="options-outline" size={18} color={colors.ink} />
+          {hasMoreFilters && <View style={styles.filterDot} />}
+        </AnimatedPressable>
       </View>
 
       {isLoadingFeed && jobPosts.length === 0 ? (
@@ -81,6 +111,19 @@ export default function JobPostsScreen() {
           ))}
         </ScrollView>
       )}
+
+      <JobFilterSheet
+        visible={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        regions={regions}
+        region={region}
+        onSelectRegion={(v) => setRegion(v as Region | null)}
+        maxBudget={maxBudget}
+        onChangeMaxBudget={setMaxBudget}
+        deadlineBefore={deadlineBefore}
+        onChangeDeadlineBefore={setDeadlineBefore}
+        resultCount={jobPosts.length}
+      />
     </SafeAreaView>
   );
 }
@@ -114,8 +157,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   filterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
+  },
+  moreFiltersButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    marginRight: spacing.md,
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.terracotta,
+    borderWidth: 1.5,
+    borderColor: colors.canvas,
   },
   loading: {
     flex: 1,

@@ -28,6 +28,9 @@ interface JobOrderState {
   /** Buyer declaring they're satisfied after reviewing the update history — this is what
    *  unlocks the final milestone payment, not just reaching "delivered" status. */
   confirmDelivery: (jobOrderId: string) => Promise<{ error: string | null }>;
+  /** Either participant backing out before the deposit is paid -- the only stage where there's
+   *  nothing to unwind. Enforced server-side by the cancel_job_order() RPC, not by this call. */
+  cancelJobOrder: (jobOrderId: string) => Promise<{ error: string | null }>;
   setAddress: (jobOrderId: string, address: Address) => Promise<{ error: string | null }>;
   uploadFinalFile: (jobOrderId: string, path: string, fileName: string) => Promise<{ error: string | null }>;
   getFinalFileDownloadUrl: (jobOrderId: string) => Promise<string | null>;
@@ -144,6 +147,13 @@ export const useJobOrderStore = create<JobOrderState>((set, get) => {
         .update({ buyer_confirmed_at: new Date().toISOString() })
         .eq('id', jobOrderId);
       if (error) return { error: error.message };
+      await refresh(jobOrderId);
+      return { error: null };
+    },
+
+    cancelJobOrder: async (jobOrderId) => {
+      const { data, error } = await supabase.rpc('cancel_job_order', { p_job_order_id: jobOrderId });
+      if (error || !data) return { error: error?.message ?? 'Could not cancel this job order.' };
       await refresh(jobOrderId);
       return { error: null };
     },

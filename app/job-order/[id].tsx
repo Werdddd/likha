@@ -33,6 +33,7 @@ export default function JobOrderDetailScreen() {
   const uploadMilestoneProof = useJobOrderStore((s) => s.uploadMilestoneProof);
   const releaseMilestone = useJobOrderStore((s) => s.releaseMilestone);
   const setStatus = useJobOrderStore((s) => s.setStatus);
+  const cancelJobOrder = useJobOrderStore((s) => s.cancelJobOrder);
   const setAddress = useJobOrderStore((s) => s.setAddress);
   const uploadFinalFile = useJobOrderStore((s) => s.uploadFinalFile);
   const getFinalFileDownloadUrl = useJobOrderStore((s) => s.getFinalFileDownloadUrl);
@@ -148,6 +149,26 @@ export default function JobOrderDetailScreen() {
     const { error } = await submitForReview(jobOrder.id);
     setBusyAction(null);
     if (error) Alert.alert('Could not update status', error);
+  };
+
+  const handleCancelOrder = () => {
+    Alert.alert(
+      'Cancel this job order?',
+      "This can't be undone. Only possible before the deposit is paid.",
+      [
+        { text: 'Keep it', style: 'cancel' },
+        {
+          text: 'Cancel Order',
+          style: 'destructive',
+          onPress: async () => {
+            setBusyAction('cancel-order');
+            const { error } = await cancelJobOrder(jobOrder.id);
+            setBusyAction(null);
+            if (error) Alert.alert('Could not cancel this job order', error);
+          },
+        },
+      ],
+    );
   };
 
   const handleRequestRevision = async () => {
@@ -377,6 +398,15 @@ export default function JobOrderDetailScreen() {
               <Ionicons name="checkmark-circle" size={15} color={colors.golden} />
               <Text style={styles.confirmedText}>You confirmed this delivery — pay the balance below.</Text>
             </View>
+          )}
+          {(isBuyer || isCreator) && jobOrder.status === 'deposit_pending' && (
+            <Button
+              label={busyAction === 'cancel-order' ? 'Cancelling…' : 'Cancel Job Order'}
+              variant="ghost"
+              onPress={handleCancelOrder}
+              disabled={busyAction === 'cancel-order'}
+              style={styles.milestoneActionButton}
+            />
           )}
         </View>
 

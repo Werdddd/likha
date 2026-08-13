@@ -168,13 +168,28 @@ export interface DashboardStats {
   topListings: TopListing[];
 }
 
-export type NotificationKind = 'appreciation' | 'follow' | 'comment';
+export type NotificationKind =
+  | 'appreciation'
+  | 'follow'
+  | 'comment'
+  | 'job_offer'
+  | 'job_offer_accepted'
+  | 'job_offer_rejected'
+  | 'job_offer_withdrawn'
+  | 'job_order_milestone_paid'
+  | 'job_order_milestone_released'
+  | 'job_order_update'
+  | 'job_order_revision'
+  | 'job_order_delivered'
+  | 'job_order_cancelled';
 
 export interface Notification {
   id: string;
   kind: NotificationKind;
   creatorId: string;
   projectId?: string;
+  jobPostId?: string;
+  jobOrderId?: string;
   createdAt: string;
   read: boolean;
 }

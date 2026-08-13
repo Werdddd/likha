@@ -377,6 +377,8 @@ export interface NotificationRow {
   actor_id: string;
   kind: string;
   project_id: string | null;
+  job_post_id: string | null;
+  job_order_id: string | null;
   read: boolean;
   created_at: string;
 }
@@ -387,6 +389,8 @@ export function notificationRowToNotification(row: NotificationRow): Notificatio
     kind: row.kind as NotificationKind,
     creatorId: row.actor_id,
     projectId: row.project_id ?? undefined,
+    jobPostId: row.job_post_id ?? undefined,
+    jobOrderId: row.job_order_id ?? undefined,
     createdAt: row.created_at,
     read: row.read,
   };

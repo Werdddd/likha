@@ -30,6 +30,8 @@ export default function CreatorProfileScreen() {
   const checkIsFollowing = useCreatorStore((s) => s.isFollowing);
   const followCreator = useCreatorStore((s) => s.follow);
   const unfollowCreator = useCreatorStore((s) => s.unfollow);
+  const completedJobOrderCount = useCreatorStore((s) => s.completedJobOrderCountById[id]);
+  const fetchCompletedJobOrderCount = useCreatorStore((s) => s.fetchCompletedJobOrderCount);
   const fetchByCreator = useProjectStore((s) => s.fetchByCreator);
   const projectsById = useProjectStore((s) => s.projectsById);
   const creatorProjects = useMemo(
@@ -61,6 +63,10 @@ export default function CreatorProfileScreen() {
     if (!creator) fetchCreators([id]);
     fetchByCreator(id);
   }, [id, creator, fetchCreators, fetchByCreator]);
+
+  useEffect(() => {
+    fetchCompletedJobOrderCount(id);
+  }, [id, fetchCompletedJobOrderCount]);
 
   useEffect(() => {
     if (isSeller) fetchListingsByCreator(id);
@@ -115,6 +121,7 @@ export default function CreatorProfileScreen() {
       >
         <ProfileHeader
           creator={creator}
+          completedJobOrderCount={completedJobOrderCount}
           actions={
             <View style={styles.actionButtons}>
               {creator.id !== currentUserId && (

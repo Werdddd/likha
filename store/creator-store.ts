@@ -6,6 +6,7 @@ import type { Category, Creator, Region } from '../types';
 
 interface CreatorState {
   creatorsById: Record<string, Creator>;
+  completedJobOrderCountById: Record<string, number>;
   upsertFromRows: (rows: ProfileRow[]) => void;
   fetchByIds: (ids: string[]) => Promise<void>;
   getCreator: (id: string) => Creator | undefined;
@@ -14,10 +15,14 @@ interface CreatorState {
   fetchFollowingSet: (followerId: string, followeeIds: string[]) => Promise<Set<string>>;
   follow: (followerId: string, followeeId: string) => Promise<{ error: string | null }>;
   unfollow: (followerId: string, followeeId: string) => Promise<{ error: string | null }>;
+  /** Public track-record stat for a creator's profile -- job_orders itself is only readable by
+   *  its two participants, so this goes through the completed_job_order_count() RPC instead. */
+  fetchCompletedJobOrderCount: (creatorId: string) => Promise<void>;
 }
 
 export const useCreatorStore = create<CreatorState>((set, get) => ({
   creatorsById: {},
+  completedJobOrderCountById: {},
 
   upsertFromRows: (rows) => {
     if (rows.length === 0) return;
@@ -59,6 +64,14 @@ export const useCreatorStore = create<CreatorState>((set, get) => ({
     const rows = data as ProfileRow[];
     get().upsertFromRows(rows);
     return rows.map(profileRowToCreator);
+  },
+
+  fetchCompletedJobOrderCount: async (creatorId) => {
+    const { data, error } = await supabase.rpc('completed_job_order_count', { p_creator_id: creatorId });
+    if (error || data === null) return;
+    set((state) => ({
+      completedJobOrderCountById: { ...state.completedJobOrderCountById, [creatorId]: data as number },
+    }));
   },
 
   isFollowing: async (followerId, followeeId) => {

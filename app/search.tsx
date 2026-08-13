@@ -6,12 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryRow } from '../components/CategoryRow';
 import { CreatorCard } from '../components/CreatorCard';
+import { JobPostCard } from '../components/JobPostCard';
 import { MasonryGrid } from '../components/MasonryGrid';
 import { SearchFilterSheet } from '../components/SearchFilterSheet';
 import { AnimatedPressable, TextField } from '../components/ui';
 import { categories, regions } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
 import { useCreatorStore } from '../store/creator-store';
+import { useJobPostStore } from '../store/job-post-store';
 import { useProjectStore } from '../store/project-store';
 import type { Category, Creator, Project, Region } from '../types';
 
@@ -27,16 +29,19 @@ export default function SearchScreen() {
   const fetchFeed = useProjectStore((s) => s.fetchFeed);
   const searchCreators = useCreatorStore((s) => s.searchCreators);
   const getCreator = useCreatorStore((s) => s.getCreator);
+  const jobPostsById = useJobPostStore((s) => s.jobPostsById);
+  const fetchJobPostFeed = useJobPostStore((s) => s.fetchFeed);
 
   useEffect(() => {
     fetchFeed();
-  }, [fetchFeed]);
+    fetchJobPostFeed();
+  }, [fetchFeed, fetchJobPostFeed]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchFeed();
+    await Promise.all([fetchFeed(), fetchJobPostFeed()]);
     setRefreshing(false);
-  }, [fetchFeed]);
+  }, [fetchFeed, fetchJobPostFeed]);
 
   const projects = useMemo(() => Object.values(projectsById), [projectsById]);
 
@@ -69,6 +74,21 @@ export default function SearchScreen() {
       cancelled = true;
     };
   }, [normalizedQuery, category, region, searchCreators]);
+
+  const matchedJobPosts = useMemo(() => {
+    return Object.values(jobPostsById)
+      .filter((jp) => {
+        if (jp.status !== 'open') return false;
+        const matchesQuery =
+          normalizedQuery.length === 0 ||
+          jp.title.toLowerCase().includes(normalizedQuery) ||
+          jp.description.toLowerCase().includes(normalizedQuery);
+        const matchesCategory = !category || jp.category === category;
+        const matchesRegion = !region || jp.region === region;
+        return matchesQuery && matchesCategory && matchesRegion;
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, [jobPostsById, normalizedQuery, category, region]);
 
   const categoryGroups = useMemo(() => {
     return categories
@@ -134,6 +154,15 @@ export default function SearchScreen() {
                 <Text style={styles.sectionTitle}>Creators</Text>
                 {matchedCreators.map((creator) => (
                   <CreatorCard key={creator.id} creator={creator} onPress={() => router.push(`/creator/${creator.id}`)} />
+                ))}
+              </View>
+            )}
+
+            {matchedJobPosts.length > 0 && (
+              <View style={styles.creatorsSection}>
+                <Text style={styles.sectionTitle}>Job Posts</Text>
+                {matchedJobPosts.map((jobPost) => (
+                  <JobPostCard key={jobPost.id} jobPost={jobPost} onPress={() => router.push(`/job-post/${jobPost.id}`)} />
                 ))}
               </View>
             )}

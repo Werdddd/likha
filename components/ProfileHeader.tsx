@@ -10,6 +10,7 @@ import { Avatar } from './ui/Avatar';
 interface ProfileHeaderProps {
   creator: Creator;
   actions?: ReactNode;
+  completedJobOrderCount?: number;
 }
 
 const BADGE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -19,7 +20,7 @@ const BADGE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Student: 'school',
 };
 
-export function ProfileHeader({ creator, actions }: ProfileHeaderProps) {
+export function ProfileHeader({ creator, actions, completedJobOrderCount }: ProfileHeaderProps) {
   return (
     <View>
       <Image source={{ uri: creator.coverUrl }} style={styles.cover} contentFit="cover" />
@@ -75,6 +76,12 @@ export function ProfileHeader({ creator, actions }: ProfileHeaderProps) {
           <Stat label="Followers" value={creator.followerCount} />
           <View style={styles.statDivider} />
           <Stat label="Following" value={creator.followingCount} />
+          {!!completedJobOrderCount && (
+            <>
+              <View style={styles.statDivider} />
+              <Stat label="Jobs Done" value={completedJobOrderCount} />
+            </>
+          )}
         </View>
 
         <View style={styles.sectionHeader}>
