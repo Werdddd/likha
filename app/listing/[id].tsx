@@ -1,21 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MediaStackCarousel } from '../../components/MediaStackCarousel';
 import { AnimatedPressable, Avatar, Button, QuantityStepper } from '../../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { formatPrice } from '../../lib/format';
@@ -39,8 +29,6 @@ export default function ListingDetailScreen() {
   const [listing, setListing] = useState<Listing | null | undefined>(cachedListing);
   const [linkedProject, setLinkedProject] = useState<Project | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [page, setPage] = useState(0);
-  const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
   const heroOpacity = useSharedValue(0);
@@ -72,9 +60,10 @@ export default function ListingDetailScreen() {
     transform: [{ scale: heroScale.value }],
   }));
 
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setPage(Math.round(e.nativeEvent.contentOffset.x / width));
-  };
+  const media = useMemo(
+    () => (listing?.images ?? []).map((url, index) => ({ id: `${listing?.id}-${index}`, type: 'image' as const, url })),
+    [listing?.id, listing?.images],
+  );
 
   if (listing === undefined) {
     return (
@@ -116,25 +105,7 @@ export default function ListingDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView>
         <Animated.View style={heroStyle}>
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-          >
-            {listing.images.map((url, index) => (
-              <Image key={url + index} source={{ uri: url }} style={{ width, height: width }} contentFit="cover" />
-            ))}
-          </ScrollView>
-
-          {listing.images.length > 1 && (
-            <View style={styles.dots}>
-              {listing.images.map((url, index) => (
-                <View key={url + index} style={[styles.dot, index === page && styles.dotActive]} />
-              ))}
-            </View>
-          )}
+          <MediaStackCarousel media={media} />
         </Animated.View>
 
         <View style={styles.content}>
@@ -261,25 +232,6 @@ const styles = StyleSheet.create({
   },
   loading: {
     marginTop: spacing.xl,
-  },
-  dots: {
-    position: 'absolute',
-    bottom: spacing.md,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.white + '80',
-  },
-  dotActive: {
-    backgroundColor: colors.white,
-    width: 16,
   },
   content: {
     padding: spacing.lg,
