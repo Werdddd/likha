@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryRow } from '../components/CategoryRow';
@@ -21,6 +21,7 @@ export default function SearchScreen() {
   const [region, setRegion] = useState<Region | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [matchedCreators, setMatchedCreators] = useState<Creator[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const projectsById = useProjectStore((s) => s.projectsById);
   const fetchFeed = useProjectStore((s) => s.fetchFeed);
@@ -29,6 +30,12 @@ export default function SearchScreen() {
 
   useEffect(() => {
     fetchFeed();
+  }, [fetchFeed]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchFeed();
+    setRefreshing(false);
   }, [fetchFeed]);
 
   const projects = useMemo(() => Object.values(projectsById), [projectsById]);
@@ -105,7 +112,11 @@ export default function SearchScreen() {
         </View>
       )}
 
-      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.list}>
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         {isBrowsing ? (
           categoryGroups.map((group) => (
             <CategoryRow

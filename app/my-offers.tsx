@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
-import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '../components/ui';
@@ -21,20 +21,31 @@ export default function MyOffersScreen() {
   const currentUserId = useSessionStore((s) => s.currentUser.id);
   const myOffers = useJobOfferStore((s) => s.myOffers);
   const fetchMyOffers = useJobOfferStore((s) => s.fetchMyOffers);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (currentUserId) fetchMyOffers(currentUserId);
+  }, [currentUserId, fetchMyOffers]);
+
+  const onRefresh = useCallback(async () => {
+    if (!currentUserId) return;
+    setRefreshing(true);
+    await fetchMyOffers(currentUserId);
+    setRefreshing(false);
   }, [currentUserId, fetchMyOffers]);
 
   if (myOffers.length === 0) {
     return (
       <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
         <Stack.Screen options={{ title: 'My Offers' }} />
-        <View style={styles.empty}>
+        <ScrollView
+          contentContainerStyle={styles.empty}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+        >
           <Ionicons name="paper-plane-outline" size={40} color={colors.softGray} />
           <Text style={styles.emptyTitle}>No offers yet</Text>
           <Text style={styles.emptyBody}>Offers you submit on job posts will show up here.</Text>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -42,7 +53,10 @@ export default function MyOffersScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'My Offers' }} />
-      <View style={styles.list}>
+      <ScrollView
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         {myOffers.map((offer) => (
           <AnimatedPressable
             key={offer.id}
@@ -62,7 +76,7 @@ export default function MyOffersScreen() {
             </Text>
           </AnimatedPressable>
         ))}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
-import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable, Button } from '../components/ui';
@@ -13,21 +13,31 @@ import { useOrderStore } from '../store/order-store';
 export default function OrdersScreen() {
   const orders = useOrderStore((s) => s.orders);
   const fetchOrders = useOrderStore((s) => s.fetchOrders);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchOrders();
+  }, [fetchOrders]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchOrders();
+    setRefreshing(false);
   }, [fetchOrders]);
 
   if (orders.length === 0) {
     return (
       <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
         <Stack.Screen options={{ title: 'My Orders' }} />
-        <View style={styles.empty}>
+        <ScrollView
+          contentContainerStyle={styles.empty}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+        >
           <Ionicons name="receipt-outline" size={40} color={colors.softGray} />
           <Text style={styles.emptyTitle}>No orders yet</Text>
           <Text style={styles.emptyBody}>Orders you place will show up here so you can track them.</Text>
           <Button label="Browse Shop" onPress={() => router.replace('/(tabs)/shop')} style={styles.emptyButton} />
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -35,7 +45,10 @@ export default function OrdersScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'My Orders' }} />
-      <View style={styles.list}>
+      <ScrollView
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         {orders.map((order) => {
           const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
           const hasPhysicalItems = orderHasPhysicalItems(order.items);
@@ -66,7 +79,7 @@ export default function OrdersScreen() {
             </AnimatedPressable>
           );
         })}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

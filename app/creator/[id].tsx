@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ListingGrid } from '../../components/ListingGrid';
@@ -40,6 +40,7 @@ export default function CreatorProfileScreen() {
     [projectsById, id],
   );
   const [isFollowing, setIsFollowing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
   const getOrCreateConversation = useMessageStore((s) => s.getOrCreateConversation);
 
@@ -64,6 +65,16 @@ export default function CreatorProfileScreen() {
   useEffect(() => {
     if (isSeller) fetchListingsByCreator(id);
   }, [isSeller, id, fetchListingsByCreator]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchCreators([id]),
+      fetchByCreator(id),
+      isSeller ? fetchListingsByCreator(id) : Promise.resolve(),
+    ]);
+    setRefreshing(false);
+  }, [id, isSeller, fetchCreators, fetchByCreator, fetchListingsByCreator]);
 
   useEffect(() => {
     if (!currentUserId || currentUserId === id) return;
@@ -98,7 +109,10 @@ export default function CreatorProfileScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         <ProfileHeader
           creator={creator}
           actions={

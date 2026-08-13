@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FeaturedWorks } from '../../components/FeaturedWorks';
@@ -19,6 +19,7 @@ import type { Category } from '../../types';
 
 export default function DiscoverScreen() {
   const [category, setCategory] = useState<Category | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const notifications = useNotificationStore((s) => s.notifications);
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
   const hasUnread = useMemo(() => notifications.some((n) => !n.read), [notifications]);
@@ -34,6 +35,12 @@ export default function DiscoverScreen() {
     fetchFeed();
     fetchNotifications();
     fetchConversations();
+  }, [fetchFeed, fetchNotifications, fetchConversations]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchFeed(), fetchNotifications(), fetchConversations()]);
+    setRefreshing(false);
   }, [fetchFeed, fetchNotifications, fetchConversations]);
 
   const projects = useMemo(
@@ -85,7 +92,10 @@ export default function DiscoverScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.list}>
+      <ScrollView
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         <FeaturedWorks
           projects={featuredProjects}
           getCreator={getCreator}

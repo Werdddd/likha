@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MasonryGrid } from '../../components/MasonryGrid';
@@ -15,6 +15,7 @@ export default function ProfileScreen() {
   const currentUser = useSessionStore((s) => s.currentUser);
   const fetchByCreator = useProjectStore((s) => s.fetchByCreator);
   const projectsById = useProjectStore((s) => s.projectsById);
+  const [refreshing, setRefreshing] = useState(false);
   const myProjects = useMemo(
     () =>
       Object.values(projectsById)
@@ -27,9 +28,19 @@ export default function ProfileScreen() {
     if (currentUser.id) fetchByCreator(currentUser.id);
   }, [currentUser.id, fetchByCreator]);
 
+  const onRefresh = useCallback(async () => {
+    if (!currentUser.id) return;
+    setRefreshing(true);
+    await fetchByCreator(currentUser.id);
+    setRefreshing(false);
+  }, [currentUser.id, fetchByCreator]);
+
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         <ProfileHeader
           creator={currentUser}
           actions={

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FilterBar } from '../../components/FilterBar';
@@ -14,12 +14,19 @@ import type { Category } from '../../types';
 
 export default function JobPostsScreen() {
   const [category, setCategory] = useState<Category | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const jobPostsById = useJobPostStore((s) => s.jobPostsById);
   const isLoadingFeed = useJobPostStore((s) => s.isLoadingFeed);
   const fetchFeed = useJobPostStore((s) => s.fetchFeed);
 
   useEffect(() => {
     fetchFeed();
+  }, [fetchFeed]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchFeed();
+    setRefreshing(false);
   }, [fetchFeed]);
 
   const jobPosts = useMemo(
@@ -56,13 +63,19 @@ export default function JobPostsScreen() {
           <ActivityIndicator color={colors.ink} />
         </View>
       ) : jobPosts.length === 0 ? (
-        <View style={styles.empty}>
+        <ScrollView
+          contentContainerStyle={styles.empty}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+        >
           <Ionicons name="briefcase-outline" size={40} color={colors.softGray} />
           <Text style={styles.emptyTitle}>No open job posts</Text>
           <Text style={styles.emptyBody}>Be the first to post a need — creators will start sending offers.</Text>
-        </View>
+        </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.list}>
+        <ScrollView
+          contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+        >
           {jobPosts.map((jobPost) => (
             <JobPostCard key={jobPost.id} jobPost={jobPost} onPress={() => router.push(`/job-post/${jobPost.id}`)} />
           ))}

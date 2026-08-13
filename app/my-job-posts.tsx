@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
-import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable, Button } from '../components/ui';
@@ -19,9 +19,17 @@ export default function MyJobPostsScreen() {
   const currentUserId = useSessionStore((s) => s.currentUser.id);
   const jobPostsById = useJobPostStore((s) => s.jobPostsById);
   const fetchMyJobPosts = useJobPostStore((s) => s.fetchMyJobPosts);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (currentUserId) fetchMyJobPosts(currentUserId);
+  }, [currentUserId, fetchMyJobPosts]);
+
+  const onRefresh = useCallback(async () => {
+    if (!currentUserId) return;
+    setRefreshing(true);
+    await fetchMyJobPosts(currentUserId);
+    setRefreshing(false);
   }, [currentUserId, fetchMyJobPosts]);
 
   const myJobPosts = Object.values(jobPostsById)
@@ -32,12 +40,15 @@ export default function MyJobPostsScreen() {
     return (
       <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
         <Stack.Screen options={{ title: 'My Job Posts' }} />
-        <View style={styles.empty}>
+        <ScrollView
+          contentContainerStyle={styles.empty}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+        >
           <Ionicons name="briefcase-outline" size={40} color={colors.softGray} />
           <Text style={styles.emptyTitle}>No job posts yet</Text>
           <Text style={styles.emptyBody}>Post a need and creators will start sending offers.</Text>
           <Button label="Post a Job" onPress={() => router.push('/job-post/new')} style={styles.emptyButton} />
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -45,7 +56,10 @@ export default function MyJobPostsScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'My Job Posts' }} />
-      <View style={styles.list}>
+      <ScrollView
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         {myJobPosts.map((jobPost) => (
           <AnimatedPressable
             key={jobPost.id}
@@ -67,7 +81,7 @@ export default function MyJobPostsScreen() {
             </Text>
           </AnimatedPressable>
         ))}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { JobOfferCard } from '../../components/JobOfferCard';
@@ -31,6 +31,7 @@ export default function JobPostDetailScreen() {
   const acceptOffer = useJobOrderStore((s) => s.acceptOffer);
   const [acceptingOfferId, setAcceptingOfferId] = useState<string | null>(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!jobPost) fetchById(id);
@@ -39,6 +40,12 @@ export default function JobPostDetailScreen() {
   useEffect(() => {
     if (id) fetchOffersForPost(id);
   }, [id, fetchOffersForPost]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchById(id), fetchOffersForPost(id)]);
+    setRefreshing(false);
+  }, [id, fetchById, fetchOffersForPost]);
 
   const isBuyer = jobPost?.buyerId === currentUserId;
   const myOffer = useMemo(() => offers.find((o) => o.creatorId === currentUserId), [offers, currentUserId]);
@@ -76,7 +83,10 @@ export default function JobPostDetailScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: jobPost.title }} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         {jobPost.images.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
             {jobPost.images.map((url) => (

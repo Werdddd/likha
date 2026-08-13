@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FilterBar } from '../../components/FilterBar';
@@ -56,6 +56,7 @@ export default function ShopScreen() {
   const [category, setCategory] = useState<ProductCategory | null>(null);
   const [query, setQuery] = useState('');
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [browseRefreshing, setBrowseRefreshing] = useState(false);
   const cartCount = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0));
 
   const listingsById = useListingStore((s) => s.listingsById);
@@ -64,6 +65,12 @@ export default function ShopScreen() {
 
   useEffect(() => {
     fetchFeed();
+  }, [fetchFeed]);
+
+  const onRefreshBrowse = useCallback(async () => {
+    setBrowseRefreshing(true);
+    await fetchFeed();
+    setBrowseRefreshing(false);
   }, [fetchFeed]);
 
   const listings = useMemo(
@@ -129,6 +136,18 @@ export default function ShopScreen() {
     setIsLoadingListings(true);
     fetchMyListings(currentUserId).finally(() => setIsLoadingListings(false));
   }, [mode, dashboardTab, currentUserId, fetchMyListings]);
+
+  const [dashboardRefreshing, setDashboardRefreshing] = useState(false);
+  const onRefreshDashboard = useCallback(async () => {
+    if (!currentUserId) return;
+    setDashboardRefreshing(true);
+    if (dashboardTab === 'listings') {
+      await fetchMyListings(currentUserId);
+    } else {
+      await fetchDashboard(currentUserId);
+    }
+    setDashboardRefreshing(false);
+  }, [currentUserId, dashboardTab, fetchMyListings, fetchDashboard]);
 
   const handleToggleListingActive = async (listing: Listing) => {
     setUpdatingListingId(listing.id);
@@ -220,7 +239,12 @@ export default function ShopScreen() {
             onSelect={handleSelectProductType}
           />
 
-          <ScrollView contentContainerStyle={styles.list}>
+          <ScrollView
+            contentContainerStyle={styles.list}
+            refreshControl={
+              <RefreshControl refreshing={browseRefreshing} onRefresh={onRefreshBrowse} tintColor={colors.ink} />
+            }
+          >
             <View style={styles.gridWrap}>
               <ListingGrid
                 listings={filteredListings}
@@ -243,19 +267,23 @@ export default function ShopScreen() {
               isLoading={isLoadingListings}
               updatingListingId={updatingListingId}
               onToggleActive={handleToggleListingActive}
+              refreshing={dashboardRefreshing}
+              onRefresh={onRefreshDashboard}
             />
           ) : isDashboardLoading && !stats ? (
             <View style={styles.loading}>
               <ActivityIndicator color={colors.ink} />
             </View>
           ) : dashboardTab === 'analytics' ? (
-            <AnalyticsTab stats={stats} />
+            <AnalyticsTab stats={stats} refreshing={dashboardRefreshing} onRefresh={onRefreshDashboard} />
           ) : (
             <OrdersTab
               orders={orders}
               updatingOrderId={updatingOrderId}
               onAdvanceStatus={handleAdvanceStatus}
               onRejectOrder={handleRejectOrder}
+              refreshing={dashboardRefreshing}
+              onRefresh={onRefreshDashboard}
             />
           )}
         </>
@@ -264,21 +292,35 @@ export default function ShopScreen() {
   );
 }
 
-function AnalyticsTab({ stats }: { stats: ReturnType<typeof useDashboardStore.getState>['stats'] }) {
+function AnalyticsTab({
+  stats,
+  refreshing,
+  onRefresh,
+}: {
+  stats: ReturnType<typeof useDashboardStore.getState>['stats'];
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
   if (!stats || stats.ordersCount === 0) {
     return (
-      <View style={styles.empty}>
+      <ScrollView
+        contentContainerStyle={styles.empty}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         <Ionicons name="stats-chart-outline" size={40} color={colors.softGray} />
         <Text style={styles.emptyTitle}>No sales yet</Text>
         <Text style={styles.emptyBody}>
           Once buyers order your listings, your revenue and top sellers will show up here.
         </Text>
-      </View>
+      </ScrollView>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.dashboardContent}>
+    <ScrollView
+      contentContainerStyle={styles.dashboardContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+    >
       <View style={styles.statsGrid}>
         <StatTile icon="cash-outline" label="Confirmed revenue" value={formatPrice(stats.revenue)} />
         <StatTile icon="time-outline" label="Pending verification" value={formatPrice(stats.pendingRevenue)} />
@@ -340,24 +382,34 @@ function OrdersTab({
   updatingOrderId,
   onAdvanceStatus,
   onRejectOrder,
+  refreshing,
+  onRefresh,
 }: {
   orders: CreatorOrder[];
   updatingOrderId: string | null;
   onAdvanceStatus: (order: CreatorOrder) => void;
   onRejectOrder: (order: CreatorOrder) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   if (orders.length === 0) {
     return (
-      <View style={styles.empty}>
+      <ScrollView
+        contentContainerStyle={styles.empty}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         <Ionicons name="receipt-outline" size={40} color={colors.softGray} />
         <Text style={styles.emptyTitle}>No orders yet</Text>
         <Text style={styles.emptyBody}>Orders containing your listings will show up here to fulfill.</Text>
-      </View>
+      </ScrollView>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.dashboardContent}>
+    <ScrollView
+      contentContainerStyle={styles.dashboardContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+    >
       {orders.map((order) => {
         const itemsTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
         const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -468,11 +520,15 @@ function ListingsTab({
   isLoading,
   updatingListingId,
   onToggleActive,
+  refreshing,
+  onRefresh,
 }: {
   listings: Listing[];
   isLoading: boolean;
   updatingListingId: string | null;
   onToggleActive: (listing: Listing) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   if (isLoading && listings.length === 0) {
     return (
@@ -484,17 +540,23 @@ function ListingsTab({
 
   if (listings.length === 0) {
     return (
-      <View style={styles.empty}>
+      <ScrollView
+        contentContainerStyle={styles.empty}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+      >
         <Ionicons name="pricetags-outline" size={40} color={colors.softGray} />
         <Text style={styles.emptyTitle}>No listings yet</Text>
         <Text style={styles.emptyBody}>Publish your first product to start selling.</Text>
         <Button label="New Listing" onPress={() => router.push('/listing/new')} style={styles.emptyButton} />
-      </View>
+      </ScrollView>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.dashboardContent}>
+    <ScrollView
+      contentContainerStyle={styles.dashboardContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+    >
       <View style={styles.listingsHeaderRow}>
         <Text style={styles.sectionLabel}>
           {listings.length} listing{listings.length === 1 ? '' : 's'}

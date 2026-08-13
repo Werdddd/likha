@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
-import { useEffect } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, AnimatedPressable } from '../components/ui';
@@ -37,9 +37,16 @@ export default function NotificationsScreen() {
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
   const markAllRead = useNotificationStore((s) => s.markAllRead);
   const fetchProjectById = useProjectStore((s) => s.fetchById);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
+  }, [fetchNotifications]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchNotifications();
+    setRefreshing(false);
   }, [fetchNotifications]);
 
   useEffect(() => {
@@ -61,6 +68,7 @@ export default function NotificationsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => <NotificationRow notification={item} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
       />
     </SafeAreaView>
   );

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
-import { useEffect } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, AnimatedPressable } from '../components/ui';
@@ -14,20 +14,30 @@ import type { Conversation } from '../types';
 export default function MessagesScreen() {
   const conversations = useMessageStore((s) => s.conversations);
   const fetchConversations = useMessageStore((s) => s.fetchConversations);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchConversations();
+  }, [fetchConversations]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchConversations();
+    setRefreshing(false);
   }, [fetchConversations]);
 
   if (conversations.length === 0) {
     return (
       <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
         <Stack.Screen options={{ title: 'Messages' }} />
-        <View style={styles.empty}>
+        <ScrollView
+          contentContainerStyle={styles.empty}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
+        >
           <Ionicons name="chatbubbles-outline" size={40} color={colors.softGray} />
           <Text style={styles.emptyTitle}>No messages yet</Text>
           <Text style={styles.emptyBody}>Conversations with creators and buyers will show up here.</Text>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -41,6 +51,7 @@ export default function MessagesScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => <ConversationRow conversation={item} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
       />
     </SafeAreaView>
   );
