@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedPressable, Button } from '../components/ui';
-import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
+import { AnimatedPressable, Badge, type BadgeTone, Button, Card } from '../components/ui';
+import { colors, radius, spacing, type as t } from '../constants/theme';
 import { formatPrice } from '../lib/format';
 import { useJobOfferStore } from '../store/job-offer-store';
 import { useJobOrderStore } from '../store/job-order-store';
@@ -17,6 +17,13 @@ const STATUS_LABELS: Record<string, string> = {
   accepted: 'Accepted',
   not_selected: 'Not Selected',
   withdrawn: 'Withdrawn',
+};
+
+const STATUS_TONES: Record<string, BadgeTone> = {
+  pending: 'active',
+  accepted: 'positive',
+  not_selected: 'muted',
+  withdrawn: 'muted',
 };
 
 export default function MyOffersScreen() {
@@ -75,7 +82,9 @@ export default function MyOffersScreen() {
           contentContainerStyle={styles.empty}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
         >
-          <Ionicons name="paper-plane-outline" size={40} color={colors.softGray} />
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="paper-plane-outline" size={32} color={colors.warmBrown} />
+          </View>
           <Text style={styles.emptyTitle}>No offers yet</Text>
           <Text style={styles.emptyBody}>Offers you submit on job posts will show up here.</Text>
         </ScrollView>
@@ -91,7 +100,7 @@ export default function MyOffersScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
       >
         {myOffers.map((offer) => (
-          <View key={offer.id} style={styles.card}>
+          <Card key={offer.id} style={styles.card}>
             <AnimatedPressable
               onPress={() => handlePressOffer(offer)}
               disabled={openingOfferId === offer.id}
@@ -99,9 +108,7 @@ export default function MyOffersScreen() {
             >
               <View style={styles.cardTop}>
                 <Text style={styles.offerDate}>{new Date(offer.createdAt).toLocaleDateString()}</Text>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusLabel}>{STATUS_LABELS[offer.status]}</Text>
-                </View>
+                <Badge label={STATUS_LABELS[offer.status]} tone={STATUS_TONES[offer.status]} />
               </View>
               <Text style={styles.offerPrice}>{formatPrice(offer.price)}</Text>
               <Text style={styles.offerPitch} numberOfLines={2}>
@@ -117,7 +124,7 @@ export default function MyOffersScreen() {
                 style={styles.withdrawButton}
               />
             )}
-          </View>
+          </Card>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -133,11 +140,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.md,
     marginBottom: spacing.sm,
-    ...shadow.sm,
   },
   cardTop: {
     flexDirection: 'row',
@@ -146,17 +149,6 @@ const styles = StyleSheet.create({
   },
   offerDate: {
     ...t.label,
-    color: colors.ink,
-  },
-  statusBadge: {
-    backgroundColor: colors.softGray + '80',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  statusLabel: {
-    ...t.caption,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
     color: colors.ink,
   },
   offerPrice: {
@@ -177,6 +169,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,
+  },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.pill,
+    backgroundColor: colors.softGray + '60',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
     ...t.h3,

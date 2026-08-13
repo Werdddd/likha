@@ -1,6 +1,9 @@
 export { AnimatedPressable } from './AnimatedPressable';
 export { Avatar } from './Avatar';
+export { Badge } from './Badge';
+export type { BadgeTone } from './Badge';
 export { Button } from './Button';
+export { Card } from './Card';
 export { Chip } from './Chip';
 export { CheckboxSelectField } from './CheckboxSelectField';
 export { MultiSelectField } from './MultiSelectField';

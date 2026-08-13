@@ -26,37 +26,55 @@ function budgetLabel(jobPost: JobPost): string {
 export function JobPostCard({ jobPost, onPress }: JobPostCardProps) {
   return (
     <AnimatedPressable onPress={onPress} style={styles.card} scaleTo={0.98}>
-      {jobPost.images[0] ? (
-        <Image source={{ uri: jobPost.images[0] }} style={styles.cover} contentFit="cover" />
-      ) : (
-        <View style={[styles.cover, styles.coverPlaceholder]}>
-          <Ionicons name="briefcase-outline" size={22} color={colors.warmBrown} />
-        </View>
-      )}
-
-      <View style={styles.body}>
-        <View style={styles.categoryRow}>
-          <Text style={styles.category}>{jobPost.category}</Text>
-          <Text style={styles.deliverable}>{jobPost.deliverableType === 'digital' ? 'Digital' : 'Physical'}</Text>
-        </View>
-        <Text style={styles.title} numberOfLines={2}>
-          {jobPost.title}
-        </Text>
-        <Text style={styles.budget}>{budgetLabel(jobPost)}</Text>
-
-        <View style={styles.metaRow}>
-          {jobPost.deadline && (
-            <View style={styles.metaItem}>
-              <Ionicons name="calendar-outline" size={12} color={colors.warmBrown} />
-              <Text style={styles.metaText}>{new Date(jobPost.deadline).toLocaleDateString()}</Text>
+      <View style={styles.row}>
+        <View style={styles.thumbWrap}>
+          {jobPost.images[0] ? (
+            <>
+              <Image source={{ uri: jobPost.images[0] }} style={styles.thumb} contentFit="cover" />
+              <View style={styles.refTag}>
+                <Text style={styles.refTagLabel}>Ref</Text>
+              </View>
+            </>
+          ) : (
+            <View style={[styles.thumb, styles.thumbPlaceholder]}>
+              <Ionicons name="briefcase-outline" size={18} color={colors.warmBrown} />
             </View>
           )}
-          <View style={styles.metaItem}>
-            <Ionicons name="chatbubbles-outline" size={12} color={colors.warmBrown} />
-            <Text style={styles.metaText}>
-              {jobPost.offerCount} offer{jobPost.offerCount === 1 ? '' : 's'}
-            </Text>
+        </View>
+
+        <View style={styles.body}>
+          <View style={styles.categoryRow}>
+            <View style={styles.categoryPill}>
+              <Text style={styles.category}>{jobPost.category}</Text>
+            </View>
+            <View style={styles.deliverableRow}>
+              <Ionicons
+                name={jobPost.deliverableType === 'digital' ? 'cloud-outline' : 'cube-outline'}
+                size={12}
+                color={colors.warmBrown}
+              />
+              <Text style={styles.deliverable}>{jobPost.deliverableType === 'digital' ? 'Digital' : 'Physical'}</Text>
+            </View>
           </View>
+          <Text style={styles.title} numberOfLines={2}>
+            {jobPost.title}
+          </Text>
+          <Text style={styles.budget}>{budgetLabel(jobPost)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.metaRow}>
+        {jobPost.deadline && (
+          <View style={styles.metaItem}>
+            <Ionicons name="calendar-outline" size={12} color={colors.warmBrown} />
+            <Text style={styles.metaText}>{new Date(jobPost.deadline).toLocaleDateString()}</Text>
+          </View>
+        )}
+        <View style={styles.metaItem}>
+          <Ionicons name="chatbubbles-outline" size={12} color={colors.warmBrown} />
+          <Text style={styles.metaText}>
+            {jobPost.offerCount} offer{jobPost.offerCount === 1 ? '' : 's'}
+          </Text>
         </View>
       </View>
     </AnimatedPressable>
@@ -66,32 +84,68 @@ export function JobPostCard({ jobPost, onPress }: JobPostCardProps) {
 const styles = StyleSheet.create({
   card: {
     borderRadius: radius.lg,
-    overflow: 'hidden',
     backgroundColor: colors.white,
-    marginBottom: spacing.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     ...shadow.sm,
   },
-  cover: {
-    width: '100%',
-    height: 120,
+  row: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  thumbWrap: {
+    width: 64,
+    height: 64,
+  },
+  thumb: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.md,
     backgroundColor: colors.softGray,
   },
-  coverPlaceholder: {
+  thumbPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  refTag: {
+    position: 'absolute',
+    bottom: 3,
+    left: 3,
+    backgroundColor: 'rgba(32, 32, 28, 0.6)',
+    borderRadius: radius.sm,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  refTagLabel: {
+    ...t.caption,
+    fontSize: 9,
+    lineHeight: 12,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.canvas,
+  },
   body: {
-    padding: spacing.md,
+    flex: 1,
   },
   categoryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  categoryPill: {
+    backgroundColor: colors.likhaYellow + '33',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
   category: {
     ...t.caption,
     fontFamily: 'PlusJakartaSans_600SemiBold',
     color: colors.golden,
+  },
+  deliverableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
   deliverable: {
     ...t.caption,
@@ -100,10 +154,10 @@ const styles = StyleSheet.create({
   title: {
     ...t.bodyMedium,
     color: colors.ink,
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   budget: {
-    ...t.body,
+    ...t.h3,
     color: colors.ink,
     marginTop: spacing.xs,
   },
@@ -111,6 +165,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.softGray,
   },
   metaItem: {
     flexDirection: 'row',

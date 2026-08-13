@@ -5,18 +5,31 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ImagePreviewModal } from '../../components/ImagePreviewModal';
 import { JobOfferCard } from '../../components/JobOfferCard';
 import { JobPostCommentsSheet } from '../../components/JobPostCommentsSheet';
-import { AnimatedPressable, Button } from '../../components/ui';
-import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
+import { AnimatedPressable, Badge, type BadgeTone, Button, Card } from '../../components/ui';
+import { colors, radius, spacing, type as t } from '../../constants/theme';
 import { formatPrice } from '../../lib/format';
 import { useJobOfferStore } from '../../store/job-offer-store';
 import { useJobOrderStore } from '../../store/job-order-store';
 import { useJobPostStore } from '../../store/job-post-store';
 import { useSessionStore } from '../../store/session-store';
-import type { JobOffer } from '../../types';
+import type { JobOffer, JobPost } from '../../types';
 
 const EMPTY_OFFERS: JobOffer[] = [];
+
+const POST_STATUS_LABELS: Record<JobPost['status'], string> = {
+  open: 'Open',
+  fulfilled: 'Fulfilled',
+  cancelled: 'Cancelled',
+};
+
+const POST_STATUS_TONES: Record<JobPost['status'], BadgeTone> = {
+  open: 'active',
+  fulfilled: 'positive',
+  cancelled: 'muted',
+};
 
 export default function JobPostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,6 +51,7 @@ export default function JobPostDetailScreen() {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [linkedJobOrderId, setLinkedJobOrderId] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!jobPost) fetchById(id);
@@ -130,38 +144,48 @@ export default function JobPostDetailScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
       >
-        {jobPost.images.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
-            {jobPost.images.map((url) => (
-              <Image key={url} source={{ uri: url }} style={styles.image} contentFit="cover" />
-            ))}
-          </ScrollView>
-        )}
-
-        <View style={styles.card}>
+        <Card style={styles.card}>
           <View style={styles.tagRow}>
-            <Text style={styles.category}>{jobPost.category}</Text>
-            <Text style={styles.deliverable}>
-              {jobPost.deliverableType === 'digital' ? 'Digital' : 'Physical'}
-            </Text>
+            <View style={styles.tagRowLeft}>
+              <Text style={styles.category}>{jobPost.category}</Text>
+              <Text style={styles.deliverable}>
+                {jobPost.deliverableType === 'digital' ? 'Digital' : 'Physical'}
+              </Text>
+            </View>
+            <Badge label={POST_STATUS_LABELS[jobPost.status]} tone={POST_STATUS_TONES[jobPost.status]} />
           </View>
           <Text style={styles.title}>{jobPost.title}</Text>
           <Text style={styles.description}>{jobPost.description}</Text>
 
+          {jobPost.images.length > 0 && (
+            <View style={styles.referenceSection}>
+              <Text style={styles.referenceLabel}>
+                Reference image{jobPost.images.length === 1 ? '' : 's'} · for inspiration only
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {jobPost.images.map((url) => (
+                  <AnimatedPressable key={url} onPress={() => setPreviewUrl(url)} scaleTo={0.95}>
+                    <Image source={{ uri: url }} style={styles.referenceThumb} contentFit="cover" />
+                  </AnimatedPressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={styles.metaGrid}>
             <View style={styles.metaItem}>
-              <Ionicons name="cash-outline" size={15} color={colors.warmBrown} />
+              <Ionicons name="cash-outline" size={14} color={colors.warmBrown} />
               <Text style={styles.metaText}>{budgetText}</Text>
             </View>
             {jobPost.deadline && (
               <View style={styles.metaItem}>
-                <Ionicons name="calendar-outline" size={15} color={colors.warmBrown} />
+                <Ionicons name="calendar-outline" size={14} color={colors.warmBrown} />
                 <Text style={styles.metaText}>Due {new Date(jobPost.deadline).toLocaleDateString()}</Text>
               </View>
             )}
             {jobPost.region && (
               <View style={styles.metaItem}>
-                <Ionicons name="location-outline" size={15} color={colors.warmBrown} />
+                <Ionicons name="location-outline" size={14} color={colors.warmBrown} />
                 <Text style={styles.metaText}>{jobPost.region}</Text>
               </View>
             )}
@@ -172,35 +196,42 @@ export default function JobPostDetailScreen() {
             <Text style={styles.commentsLinkLabel}>
               {jobPost.commentCount} comment{jobPost.commentCount === 1 ? '' : 's'} · Ask a question
             </Text>
+            <Ionicons name="chevron-forward" size={15} color={colors.warmBrown} style={styles.commentsLinkChevron} />
           </AnimatedPressable>
-        </View>
+        </Card>
 
         {(jobPost.status === 'fulfilled' || jobPost.status === 'cancelled') && (
-          <View style={styles.actionCard}>
+          <Card style={styles.actionCard}>
             {linkedJobOrderId ? (
               <Button label="View Order" onPress={() => router.push(`/job-order/${linkedJobOrderId}`)} />
             ) : (
-              <Text style={styles.myOfferText}>
-                {jobPost.status === 'fulfilled'
-                  ? canViewOrder
-                    ? 'Loading your order…'
-                    : 'This job has been fulfilled by another creator.'
-                  : 'This job post was cancelled.'}
-              </Text>
+              <View style={styles.infoRow}>
+                <Ionicons name="information-circle-outline" size={18} color={colors.warmBrown} />
+                <Text style={styles.myOfferText}>
+                  {jobPost.status === 'fulfilled'
+                    ? canViewOrder
+                      ? 'Loading your order…'
+                      : 'This job has been fulfilled by another creator.'
+                    : 'This job post was cancelled.'}
+                </Text>
+              </View>
             )}
-          </View>
+          </Card>
         )}
 
         {!isBuyer && jobPost.status === 'open' && (
-          <View style={styles.actionCard}>
+          <Card style={styles.actionCard}>
             {myOffer ? (
-              <Text style={styles.myOfferText}>
-                You submitted an offer of {formatPrice(myOffer.price)}. Status: {myOffer.status.replace('_', ' ')}.
-              </Text>
+              <View style={styles.infoRow}>
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.warmBrown} />
+                <Text style={styles.myOfferText}>
+                  You submitted an offer of {formatPrice(myOffer.price)}. Status: {myOffer.status.replace('_', ' ')}.
+                </Text>
+              </View>
             ) : (
               <Button label="Submit an Offer" onPress={() => router.push(`/job-post/${jobPost.id}/offer`)} />
             )}
-          </View>
+          </Card>
         )}
 
         {isBuyer && (
@@ -230,6 +261,7 @@ export default function JobPostDetailScreen() {
       </ScrollView>
 
       <JobPostCommentsSheet visible={commentsOpen} onClose={() => setCommentsOpen(false)} jobPostId={jobPost.id} />
+      <ImagePreviewModal visible={!!previewUrl} uri={previewUrl} onClose={() => setPreviewUrl(null)} />
     </SafeAreaView>
   );
 }
@@ -243,25 +275,31 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
   },
-  imageScroll: {
-    marginBottom: spacing.md,
+  card: {},
+  referenceSection: {
+    marginTop: spacing.md,
   },
-  image: {
-    width: 240,
-    height: 150,
-    borderRadius: radius.lg,
+  referenceLabel: {
+    ...t.caption,
+    color: colors.warmBrown,
+    marginBottom: spacing.xs,
+  },
+  referenceThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.md,
     backgroundColor: colors.softGray,
     marginRight: spacing.sm,
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    ...shadow.sm,
   },
   tagRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tagRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   category: {
     ...t.caption,
@@ -275,7 +313,7 @@ const styles = StyleSheet.create({
   title: {
     ...t.h2,
     color: colors.ink,
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   description: {
     ...t.body,
@@ -283,16 +321,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   metaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     marginTop: spacing.md,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 5,
+    backgroundColor: colors.softGray + '4d',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   metaText: {
-    ...t.body,
+    ...t.caption,
+    fontFamily: 'PlusJakartaSans_500Medium',
     color: colors.warmBrown,
   },
   commentsLink: {
@@ -307,13 +352,23 @@ const styles = StyleSheet.create({
   commentsLinkLabel: {
     ...t.bodyMedium,
     color: colors.ink,
+    flex: 1,
+  },
+  commentsLinkChevron: {
+    marginLeft: -spacing.xs,
   },
   actionCard: {
     marginTop: spacing.lg,
   },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   myOfferText: {
     ...t.body,
     color: colors.warmBrown,
+    flex: 1,
   },
   sectionLabel: {
     ...t.label,

@@ -2,12 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
+import { colors, radius, spacing, type as t } from '../constants/theme';
 import { formatPrice } from '../lib/format';
 import { useCreatorStore } from '../store/creator-store';
 import { useProjectStore } from '../store/project-store';
 import type { JobOffer } from '../types';
-import { AnimatedPressable, Avatar, Button } from './ui';
+import { AnimatedPressable, Avatar, Badge, type BadgeTone, Button, Card } from './ui';
 
 interface JobOfferCardProps {
   offer: JobOffer;
@@ -25,12 +25,19 @@ const STATUS_LABELS: Record<JobOffer['status'], string> = {
   withdrawn: 'Withdrawn',
 };
 
+const STATUS_TONES: Record<JobOffer['status'], BadgeTone> = {
+  pending: 'active',
+  accepted: 'positive',
+  not_selected: 'muted',
+  withdrawn: 'muted',
+};
+
 export function JobOfferCard({ offer, onAccept, isAccepting, onReject, isRejecting }: JobOfferCardProps) {
   const creator = useCreatorStore((s) => s.getCreator(offer.creatorId));
   const linkedProject = useProjectStore((s) => (offer.portfolioProjectId ? s.projectsById[offer.portfolioProjectId] : undefined));
 
   return (
-    <View style={styles.card}>
+    <Card style={styles.card}>
       <View style={styles.topRow}>
         <AnimatedPressable
           style={styles.creatorRow}
@@ -42,9 +49,7 @@ export function JobOfferCard({ offer, onAccept, isAccepting, onReject, isRejecti
             {creator?.name ?? 'Creator'}
           </Text>
         </AnimatedPressable>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusBadgeLabel}>{STATUS_LABELS[offer.status]}</Text>
-        </View>
+        <Badge label={STATUS_LABELS[offer.status]} tone={STATUS_TONES[offer.status]} />
       </View>
 
       <View style={styles.metaRow}>
@@ -93,17 +98,13 @@ export function JobOfferCard({ offer, onAccept, isAccepting, onReject, isRejecti
           )}
         </View>
       )}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.md,
     marginBottom: spacing.sm,
-    ...shadow.sm,
   },
   topRow: {
     flexDirection: 'row',
@@ -120,17 +121,6 @@ const styles = StyleSheet.create({
     ...t.bodyMedium,
     color: colors.ink,
     flexShrink: 1,
-  },
-  statusBadge: {
-    backgroundColor: colors.softGray + '80',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  statusBadgeLabel: {
-    ...t.caption,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: colors.ink,
   },
   metaRow: {
     flexDirection: 'row',
@@ -176,6 +166,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.softGray,
   },
   actionButton: {
     flex: 1,

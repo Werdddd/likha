@@ -9,7 +9,7 @@ import { JobFilterSheet } from '../../components/JobFilterSheet';
 import { JobPostCard } from '../../components/JobPostCard';
 import { AnimatedPressable } from '../../components/ui';
 import { categories, regions } from '../../constants/mock-data';
-import { colors, spacing, type as t } from '../../constants/theme';
+import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { useJobPostStore } from '../../store/job-post-store';
 import type { Category, Region } from '../../types';
 
@@ -97,7 +97,9 @@ export default function JobPostsScreen() {
           contentContainerStyle={styles.empty}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
         >
-          <Ionicons name="briefcase-outline" size={40} color={colors.softGray} />
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="briefcase-outline" size={32} color={colors.warmBrown} />
+          </View>
           <Text style={styles.emptyTitle}>No open job posts</Text>
           <Text style={styles.emptyBody}>Be the first to post a need — creators will start sending offers.</Text>
         </ScrollView>
@@ -155,6 +157,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.white,
+    ...shadow.sm,
   },
   filterBar: {
     flexDirection: 'row',
@@ -171,6 +174,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.white,
     marginRight: spacing.md,
+    ...shadow.sm,
   },
   filterDot: {
     position: 'absolute',
@@ -193,6 +197,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,
+  },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.pill,
+    backgroundColor: colors.softGray + '60',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
     ...t.h3,

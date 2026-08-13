@@ -1,10 +1,10 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, SelectField, TextField } from '../../../components/ui';
-import { colors, spacing, type as t } from '../../../constants/theme';
+import { Button, Card, SelectField, TextField } from '../../../components/ui';
+import { colors, radius, spacing, type as t } from '../../../constants/theme';
 import { formatPrice } from '../../../lib/format';
 import { useJobOfferStore } from '../../../store/job-offer-store';
 import { useJobPostStore } from '../../../store/job-post-store';
@@ -90,6 +90,15 @@ export default function SubmitOfferScreen() {
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'Submit an Offer' }} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {jobPost && (
+          <Card style={styles.summaryCard} padding={spacing.sm + 4}>
+            <Text style={styles.summaryLabel}>Submitting an offer for</Text>
+            <Text style={styles.summaryTitle} numberOfLines={2}>
+              {jobPost.title}
+            </Text>
+          </Card>
+        )}
+
         <TextField
           label="Your price (₱) *"
           placeholder="0"
@@ -98,9 +107,11 @@ export default function SubmitOfferScreen() {
           onChangeText={setPrice}
         />
         {budgetHint && (
-          <Text style={[styles.budgetHint, budgetError && styles.budgetHintError]}>
-            {budgetError ?? budgetHint}
-          </Text>
+          <View style={[styles.budgetHintBox, budgetError && styles.budgetHintBoxError]}>
+            <Text style={[styles.budgetHint, budgetError && styles.budgetHintError]}>
+              {budgetError ?? budgetHint}
+            </Text>
+          </View>
         )}
         <TextField
           label="Turnaround (days) *"
@@ -145,16 +156,37 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
   },
+  summaryCard: {
+    marginBottom: spacing.lg,
+  },
+  summaryLabel: {
+    ...t.caption,
+    color: colors.warmBrown,
+  },
+  summaryTitle: {
+    ...t.bodyMedium,
+    color: colors.ink,
+    marginTop: 2,
+  },
+  budgetHintBox: {
+    backgroundColor: colors.softGray + '4d',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
+  budgetHintBoxError: {
+    backgroundColor: colors.terracotta + '1a',
+  },
   budgetHint: {
     ...t.caption,
     color: colors.warmBrown,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.md,
   },
   budgetHintError: {
     color: colors.terracotta,
   },
   submit: {
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
 });

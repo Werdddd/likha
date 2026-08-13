@@ -7,6 +7,7 @@ import { categories, regions } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
 import { pickAndUploadImages } from '../lib/upload';
 import type { Category, ProductType, Region } from '../types';
+import { ImagePreviewModal } from './ImagePreviewModal';
 import { AnimatedPressable, Button, CheckboxSelectField, Chip, SelectField, TextField } from './ui';
 
 export interface JobPostFormValues {
@@ -48,6 +49,7 @@ export function JobPostForm({ submitLabel, onSubmit, isSubmitting, userId }: Job
   const [region, setRegion] = useState(ANY_REGION);
   const [images, setImages] = useState<string[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const canSubmit = title.trim().length > 0 && description.trim().length > 0 && !isSubmitting;
 
@@ -76,12 +78,16 @@ export function JobPostForm({ submitLabel, onSubmit, isSubmitting, userId }: Job
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.sectionLabel}>Reference images (optional)</Text>
+      <Text style={styles.sectionHint}>Show creators what you have in mind.</Text>
       <View style={styles.mediaRow}>
         {images.map((url) => (
           <View key={url} style={styles.mediaThumbWrap}>
-            <Image source={{ uri: url }} style={styles.mediaThumb} contentFit="cover" />
+            <AnimatedPressable onPress={() => setPreviewUrl(url)} scaleTo={0.95}>
+              <Image source={{ uri: url }} style={styles.mediaThumb} contentFit="cover" />
+            </AnimatedPressable>
             <AnimatedPressable
               style={styles.removeMediaButton}
               scaleTo={0.9}
@@ -109,6 +115,9 @@ export function JobPostForm({ submitLabel, onSubmit, isSubmitting, userId }: Job
         </AnimatedPressable>
       </View>
 
+      <View style={styles.divider} />
+
+      <Text style={styles.sectionLabel}>Details</Text>
       <Text style={styles.requiredHint}>Fields marked * are required.</Text>
 
       <TextField label="Title *" placeholder="What do you need done?" value={title} onChangeText={setTitle} />
@@ -142,7 +151,9 @@ export function JobPostForm({ submitLabel, onSubmit, isSubmitting, userId }: Job
         searchable={false}
       />
 
-      <Text style={styles.sectionLabel}>Budget</Text>
+      <View style={styles.divider} />
+
+      <Text style={styles.sectionLabel}>Budget & timeline</Text>
       <View style={styles.chipWrap}>
         <Chip label="Open to quotes" selected={budgetFlexible} onPress={() => setBudgetFlexible((v) => !v)} />
       </View>
@@ -181,7 +192,9 @@ export function JobPostForm({ submitLabel, onSubmit, isSubmitting, userId }: Job
       />
 
       <Button label={submitLabel} disabled={!canSubmit} onPress={handleSubmit} style={styles.submit} />
-    </ScrollView>
+      </ScrollView>
+      <ImagePreviewModal visible={!!previewUrl} uri={previewUrl} onClose={() => setPreviewUrl(null)} />
+    </>
   );
 }
 
@@ -192,7 +205,17 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...t.label,
     color: colors.ink,
+    marginBottom: spacing.xs,
+  },
+  sectionHint: {
+    ...t.caption,
+    color: colors.warmBrown,
     marginBottom: spacing.sm,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.softGray,
+    marginVertical: spacing.lg,
   },
   mediaRow: {
     flexDirection: 'row',
@@ -232,7 +255,10 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: radius.md,
-    backgroundColor: colors.softGray + '4d',
+    backgroundColor: colors.softGray + '30',
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.softGray,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
@@ -254,6 +280,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   submit: {
-    marginTop: spacing.sm,
+    marginTop: spacing.lg,
   },
 });

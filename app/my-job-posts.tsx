@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedPressable, Button } from '../components/ui';
-import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
+import { AnimatedPressable, Badge, type BadgeTone, Button, Card } from '../components/ui';
+import { colors, radius, spacing, type as t } from '../constants/theme';
 import { useJobPostStore } from '../store/job-post-store';
 import { useSessionStore } from '../store/session-store';
 import type { JobPost } from '../types';
@@ -14,6 +14,12 @@ const STATUS_LABELS: Record<string, string> = {
   open: 'Open',
   fulfilled: 'Fulfilled',
   cancelled: 'Cancelled',
+};
+
+const STATUS_TONES: Record<string, BadgeTone> = {
+  open: 'active',
+  fulfilled: 'positive',
+  cancelled: 'muted',
 };
 
 export default function MyJobPostsScreen() {
@@ -67,7 +73,9 @@ export default function MyJobPostsScreen() {
           contentContainerStyle={styles.empty}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
         >
-          <Ionicons name="briefcase-outline" size={40} color={colors.softGray} />
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="briefcase-outline" size={32} color={colors.warmBrown} />
+          </View>
           <Text style={styles.emptyTitle}>No job posts yet</Text>
           <Text style={styles.emptyBody}>Post a need and creators will start sending offers.</Text>
           <Button label="Post a Job" onPress={() => router.push('/job-post/new')} style={styles.emptyButton} />
@@ -84,13 +92,11 @@ export default function MyJobPostsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
       >
         {myJobPosts.map((jobPost) => (
-          <View key={jobPost.id} style={styles.card}>
+          <Card key={jobPost.id} style={styles.card}>
             <AnimatedPressable onPress={() => router.push(`/job-post/${jobPost.id}`)} scaleTo={0.98}>
               <View style={styles.cardTop}>
                 <Text style={styles.postDate}>{new Date(jobPost.createdAt).toLocaleDateString()}</Text>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusLabel}>{STATUS_LABELS[jobPost.status]}</Text>
-                </View>
+                <Badge label={STATUS_LABELS[jobPost.status]} tone={STATUS_TONES[jobPost.status]} />
               </View>
               <Text style={styles.postTitle} numberOfLines={1}>
                 {jobPost.title}
@@ -108,7 +114,7 @@ export default function MyJobPostsScreen() {
                 style={styles.cancelButton}
               />
             )}
-          </View>
+          </Card>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -124,11 +130,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.md,
     marginBottom: spacing.sm,
-    ...shadow.sm,
   },
   cardTop: {
     flexDirection: 'row',
@@ -137,17 +139,6 @@ const styles = StyleSheet.create({
   },
   postDate: {
     ...t.label,
-    color: colors.ink,
-  },
-  statusBadge: {
-    backgroundColor: colors.softGray + '80',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  statusLabel: {
-    ...t.caption,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
     color: colors.ink,
   },
   postTitle: {
@@ -168,6 +159,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,
+  },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.pill,
+    backgroundColor: colors.softGray + '60',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
     ...t.h3,
