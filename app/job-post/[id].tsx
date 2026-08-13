@@ -29,9 +29,15 @@ export default function JobPostDetailScreen() {
   const fetchOffersForPost = useJobOfferStore((s) => s.fetchOffersForPost);
 
   const acceptOffer = useJobOrderStore((s) => s.acceptOffer);
+  const rejectOffer = useJobOfferStore((s) => s.rejectOffer);
+  const fetchJobOrderByJobPostId = useJobOrderStore((s) => s.fetchJobOrderByJobPostId);
+  const subscribeToJobPost = useJobPostStore((s) => s.subscribeToJobPost);
+  const subscribeToJobPostOffers = useJobOfferStore((s) => s.subscribeToJobPostOffers);
   const [acceptingOfferId, setAcceptingOfferId] = useState<string | null>(null);
+  const [rejectingOfferId, setRejectingOfferId] = useState<string | null>(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [linkedJobOrderId, setLinkedJobOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!jobPost) fetchById(id);
@@ -40,6 +46,18 @@ export default function JobPostDetailScreen() {
   useEffect(() => {
     if (id) fetchOffersForPost(id);
   }, [id, fetchOffersForPost]);
+
+  // Live-sync: the buyer accepting an offer flips this post's status and the other offers'
+  // statuses for every creator (and the buyer, on another device) already viewing this screen.
+  useEffect(() => {
+    if (!id) return;
+    const unsubscribePost = subscribeToJobPost(id);
+    const unsubscribeOffers = subscribeToJobPostOffers(id);
+    return () => {
+      unsubscribePost();
+      unsubscribeOffers();
+    };
+  }, [id, subscribeToJobPost, subscribeToJobPostOffers]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -50,6 +68,15 @@ export default function JobPostDetailScreen() {
   const isBuyer = jobPost?.buyerId === currentUserId;
   const myOffer = useMemo(() => offers.find((o) => o.creatorId === currentUserId), [offers, currentUserId]);
   const visibleOffers = useMemo(() => offers.filter((o) => o.status !== 'withdrawn'), [offers]);
+  const canViewOrder = isBuyer || myOffer?.status === 'accepted';
+
+  // Once the post is fulfilled, look up the resulting order so the buyer and the winning
+  // creator get a direct link to it instead of a dead end.
+  useEffect(() => {
+    if (jobPost?.status === 'fulfilled' && canViewOrder) {
+      fetchJobOrderByJobPostId(jobPost.id).then((order) => setLinkedJobOrderId(order?.id ?? null));
+    }
+  }, [jobPost?.status, jobPost?.id, canViewOrder, fetchJobOrderByJobPostId]);
 
   if (!jobPost) {
     return (
@@ -69,6 +96,22 @@ export default function JobPostDetailScreen() {
       return;
     }
     router.replace(`/job-order/${jobOrder.id}`);
+  };
+
+  const handleReject = (offerId: string) => {
+    Alert.alert('Reject this offer?', 'The creator will see their offer marked as not selected.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: async () => {
+          setRejectingOfferId(offerId);
+          const { error } = await rejectOffer(offerId);
+          setRejectingOfferId(null);
+          if (error) Alert.alert('Could not reject this offer', error);
+        },
+      },
+    ]);
   };
 
   const budgetText =
@@ -132,6 +175,22 @@ export default function JobPostDetailScreen() {
           </AnimatedPressable>
         </View>
 
+        {(jobPost.status === 'fulfilled' || jobPost.status === 'cancelled') && (
+          <View style={styles.actionCard}>
+            {linkedJobOrderId ? (
+              <Button label="View Order" onPress={() => router.push(`/job-order/${linkedJobOrderId}`)} />
+            ) : (
+              <Text style={styles.myOfferText}>
+                {jobPost.status === 'fulfilled'
+                  ? canViewOrder
+                    ? 'Loading your order…'
+                    : 'This job has been fulfilled by another creator.'
+                  : 'This job post was cancelled.'}
+              </Text>
+            )}
+          </View>
+        )}
+
         {!isBuyer && jobPost.status === 'open' && (
           <View style={styles.actionCard}>
             {myOffer ? (
@@ -161,6 +220,8 @@ export default function JobPostDetailScreen() {
                   offer={offer}
                   onAccept={jobPost.status === 'open' ? () => handleAccept(offer.id) : undefined}
                   isAccepting={acceptingOfferId === offer.id}
+                  onReject={jobPost.status === 'open' ? () => handleReject(offer.id) : undefined}
+                  isRejecting={rejectingOfferId === offer.id}
                 />
               ))
             )}

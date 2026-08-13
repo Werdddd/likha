@@ -10,6 +10,8 @@ import type {
   JobOrder,
   JobOrderMilestone,
   JobOrderStatus,
+  JobOrderUpdate,
+  JobOrderUpdateComment,
   JobPost,
   JobPostComment,
   JobPostStatus,
@@ -518,6 +520,7 @@ export interface JobOrderRow {
   status: string;
   final_file_path: string | null;
   final_file_name: string | null;
+  buyer_confirmed_at: string | null;
   created_at: string;
   job_order_milestones?: JobOrderMilestoneRow[];
 }
@@ -536,6 +539,60 @@ export function jobOrderRowToJobOrder(row: JobOrderRow): JobOrder {
     finalFilePath: row.final_file_path,
     finalFileName: row.final_file_name,
     milestones: (row.job_order_milestones ?? []).map(jobOrderMilestoneRowToMilestone),
+    buyerConfirmedAt: row.buyer_confirmed_at,
+    createdAt: row.created_at,
+  };
+}
+
+export interface JobOrderUpdateImageRow {
+  id: string;
+  path: string;
+  position: number;
+}
+
+export interface JobOrderUpdateRow {
+  id: string;
+  job_order_id: string;
+  creator_id: string;
+  body: string;
+  file_path: string | null;
+  file_name: string | null;
+  created_at: string;
+  job_order_update_images?: JobOrderUpdateImageRow[];
+}
+
+export function jobOrderUpdateRowToJobOrderUpdate(row: JobOrderUpdateRow): JobOrderUpdate {
+  return {
+    id: row.id,
+    jobOrderId: row.job_order_id,
+    creatorId: row.creator_id,
+    body: row.body,
+    filePath: row.file_path,
+    fileName: row.file_name,
+    imagePaths: (row.job_order_update_images ?? [])
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map((img) => img.path),
+    createdAt: row.created_at,
+  };
+}
+
+export interface JobOrderUpdateCommentRow {
+  id: string;
+  job_order_id: string;
+  update_id: string;
+  creator_id: string;
+  text: string;
+  created_at: string;
+}
+
+export function jobOrderUpdateCommentRowToComment(row: JobOrderUpdateCommentRow): JobOrderUpdateComment {
+  return {
+    id: row.id,
+    jobOrderId: row.job_order_id,
+    updateId: row.update_id,
+    creatorId: row.creator_id,
+    text: row.text,
     createdAt: row.created_at,
   };
 }

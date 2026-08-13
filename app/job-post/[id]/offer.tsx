@@ -42,12 +42,29 @@ export default function SubmitOfferScreen() {
 
   const priceValue = Number(price);
   const turnaroundValue = Number(turnaroundDays);
-  // Budget is only a hard ceiling when the buyer set a fixed max; "open to quotes" posts (or
-  // ones with no max at all) don't constrain the price.
+  // The buyer's range is only a hard bound when they didn't mark the post "open to quotes";
+  // flexible posts (or ones with no range at all) don't constrain the price either way.
+  const budgetMin = !jobPost?.budgetFlexible ? (jobPost?.budgetMin ?? null) : null;
   const budgetMax = !jobPost?.budgetFlexible ? (jobPost?.budgetMax ?? null) : null;
+  const belowBudget = budgetMin !== null && price.trim().length > 0 && priceValue < budgetMin;
   const exceedsBudget = budgetMax !== null && priceValue > budgetMax;
+  const outOfBudget = belowBudget || exceedsBudget;
   const canSubmit =
-    priceValue > 0 && turnaroundValue > 0 && pitch.trim().length > 0 && !exceedsBudget && !isSubmitting;
+    priceValue > 0 && turnaroundValue > 0 && pitch.trim().length > 0 && !outOfBudget && !isSubmitting;
+
+  const budgetHint =
+    budgetMin !== null && budgetMax !== null
+      ? `Buyer's budget: ${formatPrice(budgetMin)} – ${formatPrice(budgetMax)}.`
+      : budgetMin !== null
+        ? `Buyer's budget: at least ${formatPrice(budgetMin)}.`
+        : budgetMax !== null
+          ? `Buyer's budget: up to ${formatPrice(budgetMax)}.`
+          : null;
+  const budgetError = belowBudget
+    ? `This is below the buyer's minimum of ${formatPrice(budgetMin as number)}.`
+    : exceedsBudget
+      ? `This exceeds the buyer's budget of up to ${formatPrice(budgetMax as number)}.`
+      : null;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -80,11 +97,9 @@ export default function SubmitOfferScreen() {
           value={price}
           onChangeText={setPrice}
         />
-        {budgetMax !== null && (
-          <Text style={[styles.budgetHint, exceedsBudget && styles.budgetHintError]}>
-            {exceedsBudget
-              ? `This exceeds the buyer's budget of up to ${formatPrice(budgetMax)}.`
-              : `Buyer's budget: up to ${formatPrice(budgetMax)}.`}
+        {budgetHint && (
+          <Text style={[styles.budgetHint, budgetError && styles.budgetHintError]}>
+            {budgetError ?? budgetHint}
           </Text>
         )}
         <TextField

@@ -14,6 +14,8 @@ interface JobOfferCardProps {
   /** Shown to the buyer viewing offers on their own post. */
   onAccept?: () => void;
   isAccepting?: boolean;
+  onReject?: () => void;
+  isRejecting?: boolean;
 }
 
 const STATUS_LABELS: Record<JobOffer['status'], string> = {
@@ -23,7 +25,7 @@ const STATUS_LABELS: Record<JobOffer['status'], string> = {
   withdrawn: 'Withdrawn',
 };
 
-export function JobOfferCard({ offer, onAccept, isAccepting }: JobOfferCardProps) {
+export function JobOfferCard({ offer, onAccept, isAccepting, onReject, isRejecting }: JobOfferCardProps) {
   const creator = useCreatorStore((s) => s.getCreator(offer.creatorId));
   const linkedProject = useProjectStore((s) => (offer.portfolioProjectId ? s.projectsById[offer.portfolioProjectId] : undefined));
 
@@ -70,13 +72,26 @@ export function JobOfferCard({ offer, onAccept, isAccepting }: JobOfferCardProps
         </AnimatedPressable>
       )}
 
-      {onAccept && offer.status === 'pending' && (
-        <Button
-          label={isAccepting ? 'Accepting…' : 'Accept Offer'}
-          onPress={onAccept}
-          disabled={isAccepting}
-          style={styles.acceptButton}
-        />
+      {(onAccept || onReject) && offer.status === 'pending' && (
+        <View style={styles.actionRow}>
+          {onReject && (
+            <Button
+              label={isRejecting ? 'Rejecting…' : 'Reject'}
+              variant="ghost"
+              onPress={onReject}
+              disabled={isRejecting || isAccepting}
+              style={styles.actionButton}
+            />
+          )}
+          {onAccept && (
+            <Button
+              label={isAccepting ? 'Accepting…' : 'Accept Offer'}
+              onPress={onAccept}
+              disabled={isAccepting || isRejecting}
+              style={styles.actionButton}
+            />
+          )}
+        </View>
       )}
     </View>
   );
@@ -157,7 +172,12 @@ const styles = StyleSheet.create({
     ...t.caption,
     color: colors.ink,
   },
-  acceptButton: {
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
     marginTop: spacing.md,
+  },
+  actionButton: {
+    flex: 1,
   },
 });

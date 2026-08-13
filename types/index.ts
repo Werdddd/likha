@@ -271,5 +271,26 @@ export interface JobOrder {
   finalFilePath: string | null;
   finalFileName: string | null;
   milestones: JobOrderMilestone[];
+  buyerConfirmedAt: string | null;
+  createdAt: string;
+}
+
+export interface JobOrderUpdate {
+  id: string;
+  jobOrderId: string;
+  creatorId: string;
+  body: string;
+  filePath: string | null;
+  fileName: string | null;
+  imagePaths: string[];
+  createdAt: string;
+}
+
+export interface JobOrderUpdateComment {
+  id: string;
+  jobOrderId: string;
+  updateId: string;
+  creatorId: string;
+  text: string;
   createdAt: string;
 }

@@ -38,6 +38,9 @@ interface JobPostState {
     input: CreateJobPostInput,
   ) => Promise<{ jobPost: JobPost | null; error: string | null }>;
   cancelJobPost: (jobPostId: string) => Promise<{ error: string | null }>;
+  /** Live-updates this post (status, offer/comment counts, ...) for everyone viewing it —
+   *  e.g. so a creator sees the post flip to "fulfilled" the moment the buyer accepts an offer. */
+  subscribeToJobPost: (jobPostId: string) => () => void;
 }
 
 export const useJobPostStore = create<JobPostState>((set, get) => {
@@ -148,6 +151,23 @@ export const useJobPostStore = create<JobPostState>((set, get) => {
         return { jobPostsById: { ...state.jobPostsById, [jobPostId]: { ...post, status: 'cancelled' } } };
       });
       return { error: null };
+    },
+
+    subscribeToJobPost: (jobPostId) => {
+      const channel = supabase
+        .channel(`job-post:${jobPostId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'job_posts', filter: `id=eq.${jobPostId}` },
+          () => {
+            get().fetchById(jobPostId);
+          },
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     },
   };
 });

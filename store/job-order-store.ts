@@ -12,6 +12,8 @@ interface JobOrderState {
   isLoading: boolean;
   fetchJobOrders: (userId: string) => Promise<void>;
   fetchJobOrderById: (id: string) => Promise<JobOrder | null>;
+  /** Looks up the order created for a job post once its winning offer has been accepted. */
+  fetchJobOrderByJobPostId: (jobPostId: string) => Promise<JobOrder | null>;
   acceptOffer: (offerId: string) => Promise<{ jobOrder: JobOrder | null; error: string | null }>;
   uploadMilestoneProof: (
     jobOrderId: string,
@@ -20,9 +22,18 @@ interface JobOrderState {
   ) => Promise<{ error: string | null }>;
   releaseMilestone: (jobOrderId: string, milestoneId: string) => Promise<{ error: string | null }>;
   setStatus: (jobOrderId: string, status: JobOrderStatus) => Promise<{ error: string | null }>;
+  /** Creator moving the order back to review; clears any prior buyer confirmation so each
+   *  delivered round needs a fresh confirm before the final payment unlocks again. */
+  submitForReview: (jobOrderId: string) => Promise<{ error: string | null }>;
+  /** Buyer declaring they're satisfied after reviewing the update history — this is what
+   *  unlocks the final milestone payment, not just reaching "delivered" status. */
+  confirmDelivery: (jobOrderId: string) => Promise<{ error: string | null }>;
   setAddress: (jobOrderId: string, address: Address) => Promise<{ error: string | null }>;
   uploadFinalFile: (jobOrderId: string, path: string, fileName: string) => Promise<{ error: string | null }>;
   getFinalFileDownloadUrl: (jobOrderId: string) => Promise<string | null>;
+  /** Live-updates this order (status, milestone paid/released, final file) for both the buyer
+   *  and the creator watching it, without either side needing to manually refresh. */
+  subscribeToJobOrder: (jobOrderId: string) => () => void;
 }
 
 export const useJobOrderStore = create<JobOrderState>((set, get) => {
@@ -67,6 +78,18 @@ export const useJobOrderStore = create<JobOrderState>((set, get) => {
 
     fetchJobOrderById: async (id) => refresh(id),
 
+    fetchJobOrderByJobPostId: async (jobPostId) => {
+      const { data, error } = await supabase
+        .from('job_orders')
+        .select(JOB_ORDER_SELECT)
+        .eq('job_post_id', jobPostId)
+        .maybeSingle();
+      if (error || !data) return null;
+      const order = jobOrderRowToJobOrder(data as JobOrderRow);
+      upsert(order);
+      return order;
+    },
+
     acceptOffer: async (offerId) => {
       const { data, error } = await supabase.rpc('accept_job_offer', { p_offer_id: offerId });
       if (error || !data) {
@@ -105,6 +128,26 @@ export const useJobOrderStore = create<JobOrderState>((set, get) => {
       return { error: null };
     },
 
+    submitForReview: async (jobOrderId) => {
+      const { error } = await supabase
+        .from('job_orders')
+        .update({ status: 'delivered', buyer_confirmed_at: null })
+        .eq('id', jobOrderId);
+      if (error) return { error: error.message };
+      await refresh(jobOrderId);
+      return { error: null };
+    },
+
+    confirmDelivery: async (jobOrderId) => {
+      const { error } = await supabase
+        .from('job_orders')
+        .update({ buyer_confirmed_at: new Date().toISOString() })
+        .eq('id', jobOrderId);
+      if (error) return { error: error.message };
+      await refresh(jobOrderId);
+      return { error: null };
+    },
+
     setAddress: async (jobOrderId, address) => {
       const { error } = await supabase.from('job_orders').update({ address }).eq('id', jobOrderId);
       if (error) return { error: error.message };
@@ -126,6 +169,26 @@ export const useJobOrderStore = create<JobOrderState>((set, get) => {
       const order = get().jobOrders.find((o) => o.id === jobOrderId);
       if (!order?.finalFilePath) return null;
       return getSignedUrl('job-deliverables', order.finalFilePath);
+    },
+
+    subscribeToJobOrder: (jobOrderId) => {
+      const channel = supabase
+        .channel(`job-order:${jobOrderId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'job_orders', filter: `id=eq.${jobOrderId}` },
+          () => refresh(jobOrderId),
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'job_order_milestones', filter: `job_order_id=eq.${jobOrderId}` },
+          () => refresh(jobOrderId),
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     },
   };
 });

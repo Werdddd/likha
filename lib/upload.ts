@@ -167,6 +167,41 @@ export async function pickAndUploadPrivateImage(
   return { path, previewUri: asset.uri };
 }
 
+/**
+ * Same as `pickAndUploadPrivateImage`, but with multi-selection enabled — for attaching several
+ * reference images to something (e.g. a job order progress update) in one pass.
+ */
+export async function pickAndUploadPrivateImages(
+  bucket: string,
+  userId: string,
+  prefix: string,
+  selectionLimit = 10,
+): Promise<Array<{ path: string; previewUri: string }>> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    Alert.alert('Permission needed', 'Allow photo library access to upload images.');
+    return [];
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    base64: true,
+    allowsMultipleSelection: true,
+    selectionLimit,
+    quality: 0.8,
+  });
+
+  if (result.canceled || result.assets.length === 0) return [];
+
+  const uploaded = await Promise.all(
+    result.assets.map(async (asset) => {
+      const path = await uploadAssetRaw(bucket, userId, prefix, asset);
+      return path ? { path, previewUri: asset.uri } : null;
+    }),
+  );
+  return uploaded.filter((u): u is { path: string; previewUri: string } => u !== null);
+}
+
 /** Generates a short-lived signed URL for an object in a private bucket. */
 export async function getSignedUrl(bucket: string, path: string, expiresInSeconds = 600): Promise<string | null> {
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresInSeconds);

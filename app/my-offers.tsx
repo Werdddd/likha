@@ -8,7 +8,9 @@ import { AnimatedPressable } from '../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { formatPrice } from '../lib/format';
 import { useJobOfferStore } from '../store/job-offer-store';
+import { useJobOrderStore } from '../store/job-order-store';
 import { useSessionStore } from '../store/session-store';
+import type { JobOffer } from '../types';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
@@ -21,7 +23,9 @@ export default function MyOffersScreen() {
   const currentUserId = useSessionStore((s) => s.currentUser.id);
   const myOffers = useJobOfferStore((s) => s.myOffers);
   const fetchMyOffers = useJobOfferStore((s) => s.fetchMyOffers);
+  const fetchJobOrderByJobPostId = useJobOrderStore((s) => s.fetchJobOrderByJobPostId);
   const [refreshing, setRefreshing] = useState(false);
+  const [openingOfferId, setOpeningOfferId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUserId) fetchMyOffers(currentUserId);
@@ -33,6 +37,17 @@ export default function MyOffersScreen() {
     await fetchMyOffers(currentUserId);
     setRefreshing(false);
   }, [currentUserId, fetchMyOffers]);
+
+  const handlePressOffer = async (offer: JobOffer) => {
+    if (offer.status !== 'accepted') {
+      router.push(`/job-post/${offer.jobPostId}`);
+      return;
+    }
+    setOpeningOfferId(offer.id);
+    const jobOrder = await fetchJobOrderByJobPostId(offer.jobPostId);
+    setOpeningOfferId(null);
+    router.push(jobOrder ? `/job-order/${jobOrder.id}` : `/job-post/${offer.jobPostId}`);
+  };
 
   if (myOffers.length === 0) {
     return (
@@ -61,7 +76,8 @@ export default function MyOffersScreen() {
           <AnimatedPressable
             key={offer.id}
             style={styles.card}
-            onPress={() => router.push(`/job-post/${offer.jobPostId}`)}
+            onPress={() => handlePressOffer(offer)}
+            disabled={openingOfferId === offer.id}
             scaleTo={0.98}
           >
             <View style={styles.cardTop}>

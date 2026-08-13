@@ -6,6 +6,10 @@ import type { JobOffer } from '../types';
 
 const JOB_OFFER_SELECT = '*';
 
+function patchOfferStatus(offers: JobOffer[], offerId: string, status: JobOffer['status']): JobOffer[] {
+  return offers.map((offer) => (offer.id === offerId ? { ...offer, status } : offer));
+}
+
 interface SubmitOfferInput {
   price: number;
   turnaroundDays: number;
@@ -25,9 +29,15 @@ interface JobOfferState {
     input: SubmitOfferInput,
   ) => Promise<{ offer: JobOffer | null; error: string | null }>;
   withdrawOffer: (offerId: string) => Promise<{ error: string | null }>;
+  /** Buyer dismissing an individual pending offer on their own post, independent of accepting
+   *  another one. */
+  rejectOffer: (offerId: string) => Promise<{ error: string | null }>;
+  /** Live-updates the offer list for a post — so the buyer sees new offers arrive, and every
+   *  creator who offered sees accept/not-selected status changes, without a manual refetch. */
+  subscribeToJobPostOffers: (jobPostId: string) => () => void;
 }
 
-export const useJobOfferStore = create<JobOfferState>((set) => ({
+export const useJobOfferStore = create<JobOfferState>((set, get) => ({
   offersByJobPost: {},
   myOffers: [],
   isLoading: {},
@@ -92,13 +102,48 @@ export const useJobOfferStore = create<JobOfferState>((set) => ({
     const { error } = await supabase.from('job_offers').update({ status: 'withdrawn' }).eq('id', offerId);
     if (error) return { error: error.message };
 
-    const patch = (offer: JobOffer): JobOffer => (offer.id === offerId ? { ...offer, status: 'withdrawn' } : offer);
     set((state) => ({
       offersByJobPost: Object.fromEntries(
-        Object.entries(state.offersByJobPost).map(([jobPostId, offers]) => [jobPostId, offers.map(patch)]),
+        Object.entries(state.offersByJobPost).map(([jobPostId, offers]) => [
+          jobPostId,
+          patchOfferStatus(offers, offerId, 'withdrawn'),
+        ]),
       ),
-      myOffers: state.myOffers.map(patch),
+      myOffers: patchOfferStatus(state.myOffers, offerId, 'withdrawn'),
     }));
     return { error: null };
+  },
+
+  rejectOffer: async (offerId) => {
+    const { error } = await supabase.from('job_offers').update({ status: 'not_selected' }).eq('id', offerId);
+    if (error) return { error: error.message };
+
+    set((state) => ({
+      offersByJobPost: Object.fromEntries(
+        Object.entries(state.offersByJobPost).map(([jobPostId, offers]) => [
+          jobPostId,
+          patchOfferStatus(offers, offerId, 'not_selected'),
+        ]),
+      ),
+      myOffers: patchOfferStatus(state.myOffers, offerId, 'not_selected'),
+    }));
+    return { error: null };
+  },
+
+  subscribeToJobPostOffers: (jobPostId) => {
+    const channel = supabase
+      .channel(`job-offers:${jobPostId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'job_offers', filter: `job_post_id=eq.${jobPostId}` },
+        () => {
+          get().fetchOffersForPost(jobPostId);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   },
 }));
