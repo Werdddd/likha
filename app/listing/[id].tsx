@@ -4,6 +4,7 @@ import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView,
@@ -22,6 +23,7 @@ import { useCartStore } from '../../store/cart-store';
 import { useCreatorStore } from '../../store/creator-store';
 import { useListingStore } from '../../store/listing-store';
 import { useProjectStore } from '../../store/project-store';
+import { useSessionStore } from '../../store/session-store';
 import type { Listing, Project } from '../../types';
 
 export default function ListingDetailScreen() {
@@ -32,6 +34,7 @@ export default function ListingDetailScreen() {
   const fetchProjectById = useProjectStore((s) => s.fetchById);
   const creator = useCreatorStore((s) => (cachedListing ? s.getCreator(cachedListing.creatorId) : undefined));
   const addItem = useCartStore((s) => s.addItem);
+  const currentUserId = useSessionStore((s) => s.currentUser.id);
 
   const [listing, setListing] = useState<Listing | null | undefined>(cachedListing);
   const [linkedProject, setLinkedProject] = useState<Project | null>(null);
@@ -93,10 +96,18 @@ export default function ListingDetailScreen() {
 
   const isDigital = listing.productType === 'digital';
   const soldOut = !isDigital && listing.stock === 0;
+  const isOwner = listing.creatorId === currentUserId;
 
-  const handleAddToCart = () => addItem(listing.id, quantity);
+  const handleAddToCart = () => {
+    const { error } = addItem(listing.id, quantity);
+    if (error) Alert.alert('Could not add to cart', error);
+  };
   const handleBuyNow = () => {
-    addItem(listing.id, quantity);
+    const { error } = addItem(listing.id, quantity);
+    if (error) {
+      Alert.alert('Could not buy', error);
+      return;
+    }
     router.push('/checkout');
   };
 
@@ -127,7 +138,25 @@ export default function ListingDetailScreen() {
         </Animated.View>
 
         <View style={styles.content}>
-          <Text style={styles.title}>{listing.title}</Text>
+          {isOwner && !listing.isActive && (
+            <View style={styles.inactiveBanner}>
+              <Ionicons name="eye-off-outline" size={14} color={colors.terracotta} />
+              <Text style={styles.inactiveBannerLabel}>Deactivated — only you can see this listing.</Text>
+            </View>
+          )}
+
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, styles.titleFlex]}>{listing.title}</Text>
+            {isOwner && (
+              <AnimatedPressable
+                style={styles.editButton}
+                onPress={() => router.push(`/listing/${listing.id}/edit`)}
+                scaleTo={0.92}
+              >
+                <Ionicons name="pencil-outline" size={16} color={colors.ink} />
+              </AnimatedPressable>
+            )}
+          </View>
           <Text style={styles.price}>{formatPrice(listing.price)}</Text>
 
           {creator && (
@@ -183,28 +212,34 @@ export default function ListingDetailScreen() {
             </Link>
           )}
 
-          {!soldOut && !isDigital && (
-            <View style={styles.purchaseRow}>
-              <Text style={styles.sectionLabel}>Quantity</Text>
-              <QuantityStepper quantity={quantity} onChange={setQuantity} max={listing.stock ?? 99} />
-            </View>
-          )}
+          {isOwner ? (
+            <Text style={styles.ownerNote}>This is your listing — you can't buy your own products.</Text>
+          ) : (
+            <>
+              {!soldOut && !isDigital && (
+                <View style={styles.purchaseRow}>
+                  <Text style={styles.sectionLabel}>Quantity</Text>
+                  <QuantityStepper quantity={quantity} onChange={setQuantity} max={listing.stock ?? 99} />
+                </View>
+              )}
 
-          <View style={styles.actionsRow}>
-            <Button
-              label={soldOut ? 'Sold Out' : 'Add to Cart'}
-              variant="secondary"
-              disabled={soldOut}
-              onPress={handleAddToCart}
-              style={styles.actionButton}
-            />
-            <Button
-              label={isDigital ? 'Buy & Download' : 'Buy Now'}
-              disabled={soldOut}
-              onPress={handleBuyNow}
-              style={styles.actionButton}
-            />
-          </View>
+              <View style={styles.actionsRow}>
+                <Button
+                  label={soldOut ? 'Sold Out' : 'Add to Cart'}
+                  variant="secondary"
+                  disabled={soldOut}
+                  onPress={handleAddToCart}
+                  style={styles.actionButton}
+                />
+                <Button
+                  label={isDigital ? 'Buy & Download' : 'Buy Now'}
+                  disabled={soldOut}
+                  onPress={handleBuyNow}
+                  style={styles.actionButton}
+                />
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -248,6 +283,37 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+  },
+  inactiveBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.terracotta + '1a',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  inactiveBannerLabel: {
+    ...t.caption,
+    color: colors.terracotta,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  titleFlex: {
+    flex: 1,
+  },
+  editButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.softGray + '4d',
   },
   title: {
     ...t.h1,
@@ -329,6 +395,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: spacing.lg,
+  },
+  ownerNote: {
+    ...t.caption,
+    color: colors.warmBrown,
     marginTop: spacing.lg,
   },
   sectionLabel: {

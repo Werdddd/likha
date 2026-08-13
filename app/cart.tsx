@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +11,7 @@ import { formatPrice } from '../lib/format';
 import { useCartStore } from '../store/cart-store';
 import { useCreatorStore } from '../store/creator-store';
 import { useListingStore } from '../store/listing-store';
+import { useSessionStore } from '../store/session-store';
 import type { Listing } from '../types';
 
 export default function CartScreen() {
@@ -18,10 +20,23 @@ export default function CartScreen() {
   const removeItem = useCartStore((s) => s.removeItem);
   const listingsById = useListingStore((s) => s.listingsById);
   const getCreator = useCreatorStore((s) => s.getCreator);
+  const currentUserId = useSessionStore((s) => s.currentUser.id);
+
+  // A listing added before self-purchase was blocked (or one whose creator_id somehow matches
+  // the signed-in user) shouldn't sit in the cart — clean it up rather than let checkout reject it.
+  useEffect(() => {
+    if (!currentUserId) return;
+    for (const item of items) {
+      if (listingsById[item.listingId]?.creatorId === currentUserId) {
+        removeItem(item.listingId);
+      }
+    }
+  }, [items, listingsById, currentUserId, removeItem]);
 
   const lines = items
     .map((item) => ({ item, listing: listingsById[item.listingId] }))
-    .filter((line): line is { item: (typeof items)[number]; listing: Listing } => !!line.listing);
+    .filter((line): line is { item: (typeof items)[number]; listing: Listing } => !!line.listing)
+    .filter((line) => line.listing.creatorId !== currentUserId);
 
   const subtotal = lines.reduce((sum, { item, listing }) => sum + listing.price * item.quantity, 0);
 

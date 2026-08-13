@@ -24,6 +24,7 @@ interface OrderState {
     buyerId: string,
     input: PlaceOrderInput,
   ) => Promise<{ order: Order | null; error: string | null }>;
+  cancelOrder: (orderId: string) => Promise<{ error: string | null }>;
   getDigitalDownloadUrl: (listingId: string) => Promise<string | null>;
 }
 
@@ -43,28 +44,14 @@ export const useOrderStore = create<OrderState>((set) => ({
   },
 
   placeOrder: async (buyerId, input) => {
-    const { data: orderData, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        buyer_id: buyerId,
-        subtotal: input.subtotal,
-        shipping_fee: input.shippingFee,
-        total: input.total,
-        payment_method: input.paymentMethod,
-        payment_proof_path: input.paymentProofPath,
-        address: input.address,
-      })
-      .select()
-      .single();
-    if (orderError || !orderData) {
-      return { order: null, error: orderError?.message ?? 'Could not place order.' };
-    }
-
-    const orderRow = orderData as OrderRow;
-
-    const { error: itemsError } = await supabase.from('order_items').insert(
-      input.items.map((item) => ({
-        order_id: orderRow.id,
+    const { data: placedOrder, error: placeError } = await supabase.rpc('place_order', {
+      p_subtotal: input.subtotal,
+      p_shipping_fee: input.shippingFee,
+      p_total: input.total,
+      p_payment_method: input.paymentMethod,
+      p_payment_proof_path: input.paymentProofPath,
+      p_address: input.address,
+      p_items: input.items.map((item) => ({
         listing_id: item.listingId,
         title: item.title,
         cover_url: item.coverUrl,
@@ -72,13 +59,17 @@ export const useOrderStore = create<OrderState>((set) => ({
         quantity: item.quantity,
         product_type: item.productType,
       })),
-    );
-    if (itemsError) return { order: null, error: itemsError.message };
+    });
+    if (placeError || !placedOrder) {
+      return { order: null, error: placeError?.message ?? 'Could not place order.' };
+    }
+
+    const orderId = (placedOrder as OrderRow).id;
 
     const { data: fullOrderData, error: fetchError } = await supabase
       .from('orders')
       .select(ORDER_SELECT)
-      .eq('id', orderRow.id)
+      .eq('id', orderId)
       .single();
     if (fetchError || !fullOrderData) {
       return { order: null, error: 'Order was placed but could not be reloaded.' };
@@ -87,6 +78,16 @@ export const useOrderStore = create<OrderState>((set) => ({
     const order = orderRowToOrder(fullOrderData as OrderRow);
     set((state) => ({ orders: [order, ...state.orders] }));
     return { order, error: null };
+  },
+
+  cancelOrder: async (orderId) => {
+    const { error } = await supabase.from('orders').update({ status: 'cancelled' }).eq('id', orderId);
+    if (error) return { error: error.message };
+
+    set((state) => ({
+      orders: state.orders.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' } : o)),
+    }));
+    return { error: null };
   },
 
   getDigitalDownloadUrl: async (listingId) => {

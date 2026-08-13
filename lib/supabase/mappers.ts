@@ -184,6 +184,7 @@ export interface ListingRow {
   stock: number | null;
   digital_file_path: string | null;
   digital_file_name: string | null;
+  is_active: boolean;
   created_at: string;
   profiles?: ProfileRow | null;
   listing_images?: ListingImageRow[];
@@ -208,7 +209,9 @@ export function listingRowToListing(row: ListingRow): Listing {
     category: row.category as ProductCategory,
     tags: row.tags,
     stock: row.stock,
+    digitalFilePath: row.digital_file_path ?? undefined,
     digitalFileName: row.digital_file_name ?? undefined,
+    isActive: row.is_active,
     createdAt: row.created_at,
   };
 }
@@ -271,6 +274,7 @@ export interface CreatorOrderItemRow {
   product_type: string;
   orders: {
     id: string;
+    buyer_id: string;
     status: string;
     address: Address | null;
     payment_method: string;
@@ -299,6 +303,7 @@ export function creatorOrderItemRowsToCreatorOrders(rows: CreatorOrderItemRow[])
     } else {
       byOrder.set(row.order_id, {
         id: row.order_id,
+        buyerId: row.orders.buyer_id,
         status: row.orders.status as OrderStatus,
         createdAt: row.orders.created_at,
         address: row.orders.address,

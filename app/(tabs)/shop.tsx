@@ -27,7 +27,7 @@ import { useCreatorStore } from '../../store/creator-store';
 import { useDashboardStore } from '../../store/dashboard-store';
 import { useListingStore } from '../../store/listing-store';
 import { useSessionStore } from '../../store/session-store';
-import type { CreatorOrder, ProductCategory, ProductType } from '../../types';
+import type { CreatorOrder, Listing, ProductCategory, ProductType } from '../../types';
 
 const PRODUCT_TYPE_FILTERS: Array<{ value: ProductType; label: string }> = [
   { value: 'digital', label: 'Digital' },
@@ -35,7 +35,7 @@ const PRODUCT_TYPE_FILTERS: Array<{ value: ProductType; label: string }> = [
 ];
 
 type ShopMode = 'browse' | 'my-shop';
-type DashboardTab = 'analytics' | 'orders';
+type DashboardTab = 'listings' | 'analytics' | 'orders';
 
 const SHOP_MODE_OPTIONS: Array<{ value: ShopMode; label: string }> = [
   { value: 'browse', label: 'Browse' },
@@ -43,8 +43,9 @@ const SHOP_MODE_OPTIONS: Array<{ value: ShopMode; label: string }> = [
 ];
 
 const DASHBOARD_TAB_OPTIONS: Array<{ value: DashboardTab; label: string }> = [
-  { value: 'analytics', label: 'Analytics' },
+  { value: 'listings', label: 'Listings' },
   { value: 'orders', label: 'Orders' },
+  { value: 'analytics', label: 'Analytics' },
 ];
 
 export default function ShopScreen() {
@@ -98,7 +99,7 @@ export default function ShopScreen() {
   );
 
   // My Shop (seller/creator) state
-  const [dashboardTab, setDashboardTab] = useState<DashboardTab>('analytics');
+  const [dashboardTab, setDashboardTab] = useState<DashboardTab>('listings');
   const currentUserId = useSessionStore((s) => s.currentUser.id);
   const orders = useDashboardStore((s) => s.orders);
   const stats = useDashboardStore((s) => s.stats);
@@ -107,9 +108,34 @@ export default function ShopScreen() {
   const updateOrderStatus = useDashboardStore((s) => s.updateOrderStatus);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
+  const fetchMyListings = useListingStore((s) => s.fetchMyListings);
+  const setListingActive = useListingStore((s) => s.setListingActive);
+  const [isLoadingListings, setIsLoadingListings] = useState(false);
+  const [updatingListingId, setUpdatingListingId] = useState<string | null>(null);
+  const myListings = useMemo(
+    () =>
+      Object.values(listingsById)
+        .filter((l) => l.creatorId === currentUserId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [listingsById, currentUserId],
+  );
+
   useEffect(() => {
     if (mode === 'my-shop' && currentUserId) fetchDashboard(currentUserId);
   }, [mode, currentUserId, fetchDashboard]);
+
+  useEffect(() => {
+    if (mode !== 'my-shop' || dashboardTab !== 'listings' || !currentUserId) return;
+    setIsLoadingListings(true);
+    fetchMyListings(currentUserId).finally(() => setIsLoadingListings(false));
+  }, [mode, dashboardTab, currentUserId, fetchMyListings]);
+
+  const handleToggleListingActive = async (listing: Listing) => {
+    setUpdatingListingId(listing.id);
+    const { error } = await setListingActive(listing.id, !listing.isActive);
+    setUpdatingListingId(null);
+    if (error) Alert.alert('Could not update listing', error);
+  };
 
   const handleAdvanceStatus = async (order: CreatorOrder) => {
     const next = nextOrderStatus(order.status, orderHasPhysicalItems(order.items));
@@ -211,7 +237,14 @@ export default function ShopScreen() {
             <TabRow options={DASHBOARD_TAB_OPTIONS} value={dashboardTab} onChange={setDashboardTab} />
           </View>
 
-          {isDashboardLoading && !stats ? (
+          {dashboardTab === 'listings' ? (
+            <ListingsTab
+              listings={myListings}
+              isLoading={isLoadingListings}
+              updatingListingId={updatingListingId}
+              onToggleActive={handleToggleListingActive}
+            />
+          ) : isDashboardLoading && !stats ? (
             <View style={styles.loading}>
               <ActivityIndicator color={colors.ink} />
             </View>
@@ -247,11 +280,17 @@ function AnalyticsTab({ stats }: { stats: ReturnType<typeof useDashboardStore.ge
   return (
     <ScrollView contentContainerStyle={styles.dashboardContent}>
       <View style={styles.statsGrid}>
-        <StatTile icon="cash-outline" label="Revenue" value={formatPrice(stats.revenue)} />
+        <StatTile icon="cash-outline" label="Confirmed revenue" value={formatPrice(stats.revenue)} />
+        <StatTile icon="time-outline" label="Pending verification" value={formatPrice(stats.pendingRevenue)} />
         <StatTile icon="receipt-outline" label="Orders" value={stats.ordersCount.toLocaleString()} />
         <StatTile icon="cube-outline" label="Items sold" value={stats.itemsSold.toLocaleString()} />
         <StatTile icon="pricetags-outline" label="Listings" value={stats.listingsCount.toLocaleString()} />
       </View>
+      {stats.pendingRevenue > 0 && (
+        <Text style={styles.pendingHint}>
+          Pending revenue is from orders whose payment you haven't verified yet — review them in Orders.
+        </Text>
+      )}
 
       <Text style={styles.sectionLabel}>Top listings</Text>
       <View style={styles.card}>
@@ -424,6 +463,95 @@ function OrdersTab({
   );
 }
 
+function ListingsTab({
+  listings,
+  isLoading,
+  updatingListingId,
+  onToggleActive,
+}: {
+  listings: Listing[];
+  isLoading: boolean;
+  updatingListingId: string | null;
+  onToggleActive: (listing: Listing) => void;
+}) {
+  if (isLoading && listings.length === 0) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator color={colors.ink} />
+      </View>
+    );
+  }
+
+  if (listings.length === 0) {
+    return (
+      <View style={styles.empty}>
+        <Ionicons name="pricetags-outline" size={40} color={colors.softGray} />
+        <Text style={styles.emptyTitle}>No listings yet</Text>
+        <Text style={styles.emptyBody}>Publish your first product to start selling.</Text>
+        <Button label="New Listing" onPress={() => router.push('/listing/new')} style={styles.emptyButton} />
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={styles.dashboardContent}>
+      <View style={styles.listingsHeaderRow}>
+        <Text style={styles.sectionLabel}>
+          {listings.length} listing{listings.length === 1 ? '' : 's'}
+        </Text>
+        <AnimatedPressable
+          style={styles.newListingButton}
+          onPress={() => router.push('/listing/new')}
+          scaleTo={0.95}
+        >
+          <Ionicons name="add" size={16} color={colors.ink} />
+          <Text style={styles.newListingButtonLabel}>New</Text>
+        </AnimatedPressable>
+      </View>
+
+      {listings.map((listing) => (
+        <AnimatedPressable
+          key={listing.id}
+          style={styles.card}
+          scaleTo={0.98}
+          onPress={() => router.push(`/listing/${listing.id}/edit`)}
+        >
+          <View style={styles.listingRow}>
+            <Image source={{ uri: listing.coverUrl }} style={styles.itemThumb} contentFit="cover" />
+            <View style={styles.itemInfo}>
+              <Text style={styles.itemTitle} numberOfLines={1}>
+                {listing.title}
+              </Text>
+              <Text style={styles.itemMeta}>
+                {formatPrice(listing.price)}
+                {listing.productType === 'physical' && listing.stock !== null
+                  ? ` · ${listing.stock} in stock`
+                  : ''}
+              </Text>
+              <ProductTypeTag productType={listing.productType} />
+            </View>
+            <AnimatedPressable
+              style={[styles.statusPill, listing.isActive ? styles.statusPillActive : styles.statusPillInactive]}
+              scaleTo={0.92}
+              disabled={updatingListingId === listing.id}
+              onPress={() => onToggleActive(listing)}
+            >
+              <Text
+                style={[
+                  styles.statusPillLabel,
+                  listing.isActive ? styles.statusPillLabelActive : styles.statusPillLabelInactive,
+                ]}
+              >
+                {updatingListingId === listing.id ? '…' : listing.isActive ? 'Active' : 'Inactive'}
+              </Text>
+            </AnimatedPressable>
+          </View>
+        </AnimatedPressable>
+      ))}
+    </ScrollView>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -565,6 +693,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
+  pendingHint: {
+    ...t.caption,
+    color: colors.warmBrown,
+    marginTop: spacing.sm,
+  },
   card: {
     backgroundColor: colors.white,
     borderRadius: radius.lg,
@@ -705,5 +838,54 @@ const styles = StyleSheet.create({
     color: colors.warmBrown,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+  emptyButton: {
+    marginTop: spacing.lg,
+    alignSelf: 'stretch',
+  },
+  listingsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  newListingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: colors.likhaYellow,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  newListingButtonLabel: {
+    ...t.caption,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.ink,
+  },
+  listingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusPill: {
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+  },
+  statusPillActive: {
+    backgroundColor: colors.likhaYellow + '33',
+  },
+  statusPillInactive: {
+    backgroundColor: colors.softGray + '80',
+  },
+  statusPillLabel: {
+    ...t.caption,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+  },
+  statusPillLabelActive: {
+    color: colors.golden,
+  },
+  statusPillLabelInactive: {
+    color: colors.warmBrown,
   },
 });

@@ -33,11 +33,21 @@ interface ListingFormProps {
   submitLabel: string;
   onSubmit: (values: ListingFormValues) => void;
   isSubmitting?: boolean;
+  initialValues?: ListingFormValues;
+  /** When editing, the product type is locked — switching digital/physical after publish would
+   *  orphan the category taxonomy and file/stock requirements tied to the original type. */
+  lockProductType?: boolean;
 }
 
 const NO_PROJECT = 'None';
 
-export function ListingForm({ submitLabel, onSubmit, isSubmitting }: ListingFormProps) {
+export function ListingForm({
+  submitLabel,
+  onSubmit,
+  isSubmitting,
+  initialValues,
+  lockProductType,
+}: ListingFormProps) {
   const currentUser = useSessionStore((s) => s.currentUser);
   const fetchByCreator = useProjectStore((s) => s.fetchByCreator);
   const projectsById = useProjectStore((s) => s.projectsById);
@@ -50,17 +60,29 @@ export function ListingForm({ submitLabel, onSubmit, isSubmitting }: ListingForm
     if (currentUser.id) fetchByCreator(currentUser.id);
   }, [currentUser.id, fetchByCreator]);
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [productType, setProductType] = useState<ProductType>('digital');
-  const [category, setCategory] = useState<ProductCategory>(digitalCategories[0]);
-  const [stock, setStock] = useState('');
+  const [title, setTitle] = useState(initialValues?.title ?? '');
+  const [description, setDescription] = useState(initialValues?.description ?? '');
+  const [price, setPrice] = useState(initialValues ? String(initialValues.price) : '');
+  const [productType, setProductType] = useState<ProductType>(initialValues?.productType ?? 'digital');
+  const [category, setCategory] = useState<ProductCategory>(initialValues?.category ?? digitalCategories[0]);
+  const [stock, setStock] = useState(initialValues?.stock != null ? String(initialValues.stock) : '');
   const [projectTitle, setProjectTitle] = useState(NO_PROJECT);
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<string[]>(initialValues?.images ?? []);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
-  const [digitalFile, setDigitalFile] = useState<{ path: string; fileName: string } | null>(null);
+  const [digitalFile, setDigitalFile] = useState<{ path: string; fileName: string } | null>(
+    initialValues?.digitalFilePath && initialValues?.digitalFileName
+      ? { path: initialValues.digitalFilePath, fileName: initialValues.digitalFileName }
+      : null,
+  );
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+
+  // The linked project is set by title (see below) once `myProjects` loads, since the initial
+  // value we're given is a projectId but the picker works off titles.
+  useEffect(() => {
+    if (!initialValues?.projectId) return;
+    const match = myProjects.find((p) => p.id === initialValues.projectId);
+    if (match) setProjectTitle(match.title);
+  }, [initialValues?.projectId, myProjects]);
 
   const categoryOptions = productType === 'digital' ? digitalCategories : physicalCategories;
 
@@ -166,17 +188,30 @@ export function ListingForm({ submitLabel, onSubmit, isSubmitting }: ListingForm
         onChangeText={setPrice}
       />
 
-      <CheckboxSelectField
-        label="Product type *"
-        value={PRODUCT_TYPES.find((o) => o.value === productType)?.label ?? PRODUCT_TYPES[0].label}
-        options={PRODUCT_TYPES.map((o) => o.label)}
-        onChange={(label) => {
-          const option = PRODUCT_TYPES.find((o) => o.label === label);
-          if (option) handleSelectProductType(option.value);
-        }}
-        icon="pricetag-outline"
-        searchable={false}
-      />
+      {lockProductType ? (
+        <View style={styles.lockedFieldWrap}>
+          <Text style={styles.sectionLabel}>Product type</Text>
+          <View style={styles.lockedField}>
+            <Ionicons name="pricetag-outline" size={17} color={colors.warmBrown} />
+            <Text style={styles.lockedFieldValue}>
+              {PRODUCT_TYPES.find((o) => o.value === productType)?.label}
+            </Text>
+          </View>
+          <Text style={styles.fileHint}>Product type can't be changed after a listing is published.</Text>
+        </View>
+      ) : (
+        <CheckboxSelectField
+          label="Product type *"
+          value={PRODUCT_TYPES.find((o) => o.value === productType)?.label ?? PRODUCT_TYPES[0].label}
+          options={PRODUCT_TYPES.map((o) => o.label)}
+          onChange={(label) => {
+            const option = PRODUCT_TYPES.find((o) => o.label === label);
+            if (option) handleSelectProductType(option.value);
+          }}
+          icon="pricetag-outline"
+          searchable={false}
+        />
+      )}
 
       {productType === 'digital' ? (
         <View style={styles.fileSection}>
@@ -301,6 +336,22 @@ const styles = StyleSheet.create({
   addMediaLabel: {
     ...t.label,
     color: colors.warmBrown,
+  },
+  lockedFieldWrap: {
+    marginBottom: spacing.lg,
+  },
+  lockedField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.softGray + '4d',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+  },
+  lockedFieldValue: {
+    ...t.body,
+    color: colors.ink,
   },
   fileSection: {
     marginBottom: spacing.md,

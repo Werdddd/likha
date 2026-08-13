@@ -8,21 +8,34 @@ import {
 import type { CreatorOrder, DashboardStats, OrderStatus, TopListing } from '../types';
 
 const CREATOR_ORDER_ITEM_SELECT =
-  '*, orders!inner(id, status, address, payment_method, payment_proof_path, payment_verified, created_at), listings!inner(creator_id)';
+  '*, orders!inner(id, buyer_id, status, address, payment_method, payment_proof_path, payment_verified, created_at), listings!inner(creator_id)';
 
 function computeStats(orders: CreatorOrder[], listingsCount: number): DashboardStats {
-  // Cancelled orders never generate revenue for the creator.
-  const activeOrders = orders.filter((o) => o.status !== 'cancelled');
+  // Cancelled/rejected orders never generate revenue for the creator — a rejected order means
+  // the seller declined to fulfill it, so (unlike before) it's excluded here too.
+  const activeOrders = orders.filter((o) => o.status !== 'cancelled' && o.status !== 'rejected');
   let revenue = 0;
+  let pendingRevenue = 0;
   let itemsSold = 0;
   const byListing = new Map<string, TopListing>();
 
   for (const order of activeOrders) {
+    const orderTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    if (order.paymentVerified) {
+      revenue += orderTotal;
+    } else {
+      pendingRevenue += orderTotal;
+    }
+
+    for (const item of order.items) {
+      itemsSold += item.quantity;
+    }
+
+    // Top listings are ranked off verified sales only, so a burst of unverified/spam orders
+    // can't misrepresent what's actually selling.
+    if (!order.paymentVerified) continue;
     for (const item of order.items) {
       const lineTotal = item.price * item.quantity;
-      revenue += lineTotal;
-      itemsSold += item.quantity;
-
       const key = item.listingId || item.title;
       const existing = byListing.get(key);
       if (existing) {
@@ -46,6 +59,7 @@ function computeStats(orders: CreatorOrder[], listingsCount: number): DashboardS
 
   return {
     revenue,
+    pendingRevenue,
     ordersCount: activeOrders.length,
     itemsSold,
     listingsCount,

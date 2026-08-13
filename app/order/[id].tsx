@@ -1,18 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedPressable } from '../../components/ui';
+import { AnimatedPressable, Button } from '../../components/ui';
 import { ImagePreviewModal } from '../../components/ImagePreviewModal';
 import { OrderStatusTimeline } from '../../components/OrderStatusTimeline';
 import { ProductTypeTag } from '../../components/ProductTypeTag';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { formatPrice } from '../../lib/format';
-import { isTerminalStatus, orderHasPhysicalItems, orderStatusColor, orderStatusLabel } from '../../lib/order-status';
+import {
+  canCancelOrder,
+  isTerminalStatus,
+  orderHasPhysicalItems,
+  orderStatusColor,
+  orderStatusLabel,
+} from '../../lib/order-status';
 import { getSignedUrl } from '../../lib/upload';
+import { useListingStore } from '../../store/listing-store';
+import { useMessageStore } from '../../store/message-store';
 import { useOrderStore } from '../../store/order-store';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -26,10 +34,16 @@ export default function OrderDetailScreen() {
   const order = useOrderStore((s) => s.orders.find((o) => o.id === id));
   const fetchOrders = useOrderStore((s) => s.fetchOrders);
   const getDigitalDownloadUrl = useOrderStore((s) => s.getDigitalDownloadUrl);
+  const cancelOrder = useOrderStore((s) => s.cancelOrder);
+  const listingsById = useListingStore((s) => s.listingsById);
+  const fetchListingById = useListingStore((s) => s.fetchById);
+  const getOrCreateConversation = useMessageStore((s) => s.getOrCreateConversation);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [isLoadingProof, setIsLoadingProof] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isContactingSeller, setIsContactingSeller] = useState(false);
 
   useEffect(() => {
     if (!order) fetchOrders();
@@ -65,6 +79,43 @@ export default function OrderDetailScreen() {
     Linking.openURL(url);
   };
 
+  const handleCancel = () => {
+    Alert.alert('Cancel this order?', 'The seller will be notified and any reserved stock is released.', [
+      { text: 'Keep order', style: 'cancel' },
+      {
+        text: 'Cancel order',
+        style: 'destructive',
+        onPress: async () => {
+          setIsCancelling(true);
+          const { error } = await cancelOrder(order.id);
+          setIsCancelling(false);
+          if (error) Alert.alert('Could not cancel order', error);
+        },
+      },
+    ]);
+  };
+
+  const handleContactSeller = async () => {
+    const physicalItem = order.items.find((item) => item.productType === 'physical');
+    if (!physicalItem) return;
+
+    setIsContactingSeller(true);
+    const listing = listingsById[physicalItem.listingId] ?? (await fetchListingById(physicalItem.listingId));
+    if (!listing) {
+      setIsContactingSeller(false);
+      Alert.alert('Could not open chat', 'This listing is no longer available.');
+      return;
+    }
+
+    const conversationId = await getOrCreateConversation(listing.creatorId);
+    setIsContactingSeller(false);
+    if (!conversationId) {
+      Alert.alert('Could not open chat', 'Please try again.');
+      return;
+    }
+    router.push(`/message/${conversationId}`);
+  };
+
   const hasPhysicalItems = orderHasPhysicalItems(order.items);
   const terminal = isTerminalStatus(order.status);
   const badgeColor = orderStatusColor(order.status);
@@ -90,6 +141,36 @@ export default function OrderDetailScreen() {
           ) : (
             <View style={styles.timelineWrap}>
               <OrderStatusTimeline status={order.status} hasPhysicalItems={hasPhysicalItems} />
+            </View>
+          )}
+
+          {hasPhysicalItems && !terminal && (
+            <Text style={styles.deliveryHint}>
+              Delivery for physical items isn't tracked in-app — message the seller to coordinate handoff or
+              courier details.
+            </Text>
+          )}
+
+          {(hasPhysicalItems || canCancelOrder(order.status)) && !terminal && (
+            <View style={styles.actionRow}>
+              {hasPhysicalItems && (
+                <Button
+                  label={isContactingSeller ? 'Opening…' : 'Contact Seller'}
+                  variant="secondary"
+                  disabled={isContactingSeller}
+                  onPress={handleContactSeller}
+                  style={styles.actionButton}
+                />
+              )}
+              {canCancelOrder(order.status) && (
+                <Button
+                  label={isCancelling ? 'Cancelling…' : 'Cancel Order'}
+                  variant="ghost"
+                  disabled={isCancelling}
+                  onPress={handleCancel}
+                  style={styles.actionButton}
+                />
+              )}
             </View>
           )}
         </View>
@@ -249,6 +330,19 @@ const styles = StyleSheet.create({
   },
   timelineWrap: {
     marginTop: spacing.md,
+  },
+  deliveryHint: {
+    ...t.caption,
+    color: colors.warmBrown,
+    marginTop: spacing.md,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  actionButton: {
+    flex: 1,
   },
   itemRow: {
     flexDirection: 'row',

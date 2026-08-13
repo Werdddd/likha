@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +21,7 @@ import {
 } from '../../lib/order-status';
 import { getSignedUrl } from '../../lib/upload';
 import { useDashboardStore } from '../../store/dashboard-store';
+import { useMessageStore } from '../../store/message-store';
 import { useSessionStore } from '../../store/session-store';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -36,8 +37,10 @@ export default function CreatorOrderDetailScreen() {
   const fetchDashboard = useDashboardStore((s) => s.fetchDashboard);
   const updateOrderStatus = useDashboardStore((s) => s.updateOrderStatus);
   const verifyPayment = useDashboardStore((s) => s.verifyPayment);
+  const getOrCreateConversation = useMessageStore((s) => s.getOrCreateConversation);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isContactingBuyer, setIsContactingBuyer] = useState(false);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [isLoadingProof, setIsLoadingProof] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -101,6 +104,17 @@ export default function CreatorOrderDetailScreen() {
     if (error) Alert.alert('Could not verify payment', error);
   };
 
+  const handleContactBuyer = async () => {
+    setIsContactingBuyer(true);
+    const conversationId = await getOrCreateConversation(order.buyerId);
+    setIsContactingBuyer(false);
+    if (!conversationId) {
+      Alert.alert('Could not open chat', 'Please try again.');
+      return;
+    }
+    router.push(`/message/${conversationId}`);
+  };
+
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: `Order #${order.id.slice(-6)}` }} />
@@ -121,6 +135,21 @@ export default function CreatorOrderDetailScreen() {
             <View style={styles.timelineWrap}>
               <OrderStatusTimeline status={order.status} hasPhysicalItems={hasPhysicalItems} />
             </View>
+          )}
+
+          {hasPhysicalItems && (
+            <>
+              <Text style={styles.deliveryHint}>
+                Delivery isn't tracked in-app — message the buyer to coordinate handoff or courier details.
+              </Text>
+              <Button
+                label={isContactingBuyer ? 'Opening…' : 'Contact Buyer'}
+                variant="secondary"
+                disabled={isContactingBuyer}
+                onPress={handleContactBuyer}
+                style={styles.contactButton}
+              />
+            </>
           )}
         </View>
 
@@ -269,6 +298,14 @@ const styles = StyleSheet.create({
   },
   timelineWrap: {
     marginTop: spacing.md,
+  },
+  deliveryHint: {
+    ...t.caption,
+    color: colors.warmBrown,
+    marginTop: spacing.md,
+  },
+  contactButton: {
+    marginTop: spacing.sm,
   },
   actionRow: {
     flexDirection: 'row',

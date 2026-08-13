@@ -21,16 +21,36 @@ interface CreateListingInput {
   digitalFileName?: string;
 }
 
+interface UpdateListingInput {
+  title: string;
+  description: string;
+  price: number;
+  category: ProductCategory;
+  tags: string[];
+  stock: number | null;
+  projectId?: string;
+  imageUrls: string[];
+  digitalFilePath?: string;
+  digitalFileName?: string;
+}
+
 interface ListingState {
   listingsById: Record<string, Listing>;
   isLoadingFeed: boolean;
   fetchFeed: () => Promise<void>;
   fetchByCreator: (creatorId: string) => Promise<Listing[]>;
+  fetchMyListings: (creatorId: string) => Promise<Listing[]>;
   fetchById: (id: string) => Promise<Listing | null>;
   createListing: (
     creatorId: string,
     input: CreateListingInput,
   ) => Promise<{ listing: Listing | null; error: string | null }>;
+  updateListing: (
+    listingId: string,
+    input: UpdateListingInput,
+  ) => Promise<{ listing: Listing | null; error: string | null }>;
+  setListingActive: (listingId: string, isActive: boolean) => Promise<{ error: string | null }>;
+  deleteListing: (listingId: string) => Promise<{ error: string | null }>;
 }
 
 export const useListingStore = create<ListingState>((set, get) => {
@@ -56,13 +76,30 @@ export const useListingStore = create<ListingState>((set, get) => {
       const { data, error } = await supabase
         .from('listings')
         .select(LISTING_SELECT)
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
       set({ isLoadingFeed: false });
       if (error || !data) return;
       upsertRows(data as ListingRow[]);
     },
 
+    // Public view of a creator's shop (their profile's Shop tab, etc.) — active listings only.
     fetchByCreator: async (creatorId) => {
+      const { data, error } = await supabase
+        .from('listings')
+        .select(LISTING_SELECT)
+        .eq('creator_id', creatorId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      if (error || !data) return [];
+      const rows = data as ListingRow[];
+      upsertRows(rows);
+      return rows.map(listingRowToListing);
+    },
+
+    // Seller's own management view — includes deactivated listings (RLS only allows this for
+    // the owner; other users' inactive listings stay invisible).
+    fetchMyListings: async (creatorId) => {
       const { data, error } = await supabase
         .from('listings')
         .select(LISTING_SELECT)
@@ -124,6 +161,68 @@ export const useListingStore = create<ListingState>((set, get) => {
 
       const listing = await get().fetchById(listingRow.id);
       return { listing, error: listing ? null : 'Listing was created but could not be reloaded.' };
+    },
+
+    updateListing: async (listingId, input) => {
+      const { error: listingError } = await supabase
+        .from('listings')
+        .update({
+          project_id: input.projectId ?? null,
+          title: input.title,
+          description: input.description,
+          price: input.price,
+          category: input.category,
+          tags: input.tags,
+          stock: input.stock,
+          digital_file_path: input.digitalFilePath ?? null,
+          digital_file_name: input.digitalFileName ?? null,
+          cover_url: input.imageUrls[0] ?? null,
+        })
+        .eq('id', listingId);
+      if (listingError) return { listing: null, error: listingError.message };
+
+      const { error: deleteImagesError } = await supabase
+        .from('listing_images')
+        .delete()
+        .eq('listing_id', listingId);
+      if (deleteImagesError) return { listing: null, error: deleteImagesError.message };
+
+      if (input.imageUrls.length > 0) {
+        const { error: imagesError } = await supabase.from('listing_images').insert(
+          input.imageUrls.map((url, index) => ({
+            listing_id: listingId,
+            url,
+            position: index,
+          })),
+        );
+        if (imagesError) return { listing: null, error: imagesError.message };
+      }
+
+      const listing = await get().fetchById(listingId);
+      return { listing, error: listing ? null : 'Listing was updated but could not be reloaded.' };
+    },
+
+    setListingActive: async (listingId, isActive) => {
+      const { data, error } = await supabase
+        .from('listings')
+        .update({ is_active: isActive })
+        .eq('id', listingId)
+        .select(LISTING_SELECT)
+        .single();
+      if (error || !data) return { error: error?.message ?? 'Could not update listing.' };
+      upsertRows([data as ListingRow]);
+      return { error: null };
+    },
+
+    deleteListing: async (listingId) => {
+      const { error } = await supabase.from('listings').delete().eq('id', listingId);
+      if (error) return { error: error.message };
+      set((state) => {
+        const next = { ...state.listingsById };
+        delete next[listingId];
+        return { listingsById: next };
+      });
+      return { error: null };
     },
   };
 });

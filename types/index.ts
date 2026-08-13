@@ -90,7 +90,9 @@ export interface Listing {
   category: ProductCategory;
   tags: string[];
   stock: number | null;
+  digitalFilePath?: string;
   digitalFileName?: string;
+  isActive: boolean;
   createdAt: string;
 }
 
@@ -137,6 +139,7 @@ export interface Order {
 
 export interface CreatorOrder {
   id: string;
+  buyerId: string;
   status: OrderStatus;
   createdAt: string;
   address: Address | null;
@@ -155,7 +158,10 @@ export interface TopListing {
 }
 
 export interface DashboardStats {
+  /** Revenue from orders whose payment has been verified. */
   revenue: number;
+  /** Revenue sitting in orders still awaiting payment verification — not yet safe to count on. */
+  pendingRevenue: number;
   ordersCount: number;
   itemsSold: number;
   listingsCount: number;

@@ -4,14 +4,23 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ListingGrid } from '../../components/ListingGrid';
 import { MasonryGrid } from '../../components/MasonryGrid';
 import { ProfileHeader } from '../../components/ProfileHeader';
-import { AnimatedPressable, Button } from '../../components/ui';
+import { AnimatedPressable, Button, SegmentedControl } from '../../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { useCreatorStore } from '../../store/creator-store';
+import { useListingStore } from '../../store/listing-store';
 import { useMessageStore } from '../../store/message-store';
 import { useProjectStore } from '../../store/project-store';
 import { useSessionStore } from '../../store/session-store';
+
+type ProfileTab = 'portfolio' | 'shop';
+
+const PROFILE_TAB_OPTIONS: Array<{ value: ProfileTab; label: string }> = [
+  { value: 'portfolio', label: 'Portfolio' },
+  { value: 'shop', label: 'Shop' },
+];
 
 export default function CreatorProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,10 +43,27 @@ export default function CreatorProfileScreen() {
   const insets = useSafeAreaInsets();
   const getOrCreateConversation = useMessageStore((s) => s.getOrCreateConversation);
 
+  const isSeller = creator?.profileMode === 'open_for_work';
+  const [profileTab, setProfileTab] = useState<ProfileTab>('portfolio');
+  const fetchListingsByCreator = useListingStore((s) => s.fetchByCreator);
+  const listingsById = useListingStore((s) => s.listingsById);
+  const getCreatorForListing = useCreatorStore((s) => s.getCreator);
+  const creatorListings = useMemo(
+    () =>
+      Object.values(listingsById)
+        .filter((l) => l.creatorId === id)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [listingsById, id],
+  );
+
   useEffect(() => {
     if (!creator) fetchCreators([id]);
     fetchByCreator(id);
   }, [id, creator, fetchCreators, fetchByCreator]);
+
+  useEffect(() => {
+    if (isSeller) fetchListingsByCreator(id);
+  }, [isSeller, id, fetchListingsByCreator]);
 
   useEffect(() => {
     if (!currentUserId || currentUserId === id) return;
@@ -91,7 +117,24 @@ export default function CreatorProfileScreen() {
           }
         />
 
-        <MasonryGrid projects={creatorProjects} onPressProject={(project) => router.push(`/project/${project.id}`)} />
+        {isSeller && (
+          <View style={styles.tabRow}>
+            <SegmentedControl options={PROFILE_TAB_OPTIONS} value={profileTab} onChange={setProfileTab} />
+          </View>
+        )}
+
+        {isSeller && profileTab === 'shop' ? (
+          <View style={styles.gridWrap}>
+            <ListingGrid
+              listings={creatorListings}
+              getCreator={getCreatorForListing}
+              onPressListing={(listing) => router.push(`/listing/${listing.id}`)}
+              emptyLabel="No listings yet."
+            />
+          </View>
+        ) : (
+          <MasonryGrid projects={creatorProjects} onPressProject={(project) => router.push(`/project/${project.id}`)} />
+        )}
       </ScrollView>
 
       <AnimatedPressable
@@ -117,6 +160,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     marginTop: spacing.sm,
+  },
+  tabRow: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  gridWrap: {
+    paddingHorizontal: spacing.sm,
   },
   messageButton: {
     paddingHorizontal: spacing.md,

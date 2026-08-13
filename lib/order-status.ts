@@ -47,6 +47,10 @@ export function canRejectOrder(status: OrderStatus): boolean {
   return status === 'processing';
 }
 
+export function canCancelOrder(status: OrderStatus): boolean {
+  return status === 'processing';
+}
+
 export function orderStatusColor(status: OrderStatus): { bg: string; fg: string } {
   switch (status) {
     case 'delivered':
