@@ -351,21 +351,26 @@ export default function JobOrderDetailScreen() {
             />
           )}
           {isBuyer && jobOrder.status === 'delivered' && jobOrder.buyerConfirmedAt === null && (
-            <View style={styles.reviewActionRow}>
-              <Button
-                label={busyAction === 'request-revision' ? 'Requesting…' : 'Request Revision'}
-                variant="ghost"
-                onPress={handleRequestRevision}
-                disabled={busyAction === 'request-revision'}
-                style={styles.reviewActionButton}
-              />
-              <Button
-                label={busyAction === 'confirm-delivery' ? 'Confirming…' : "I'm Satisfied — Confirm"}
-                onPress={handleConfirmDelivery}
-                disabled={busyAction === 'confirm-delivery'}
-                style={styles.reviewActionButton}
-              />
-            </View>
+            <>
+              {jobOrder.finalFilePath && (
+                <Text style={styles.milestoneStatus}>Review the final deliverable below before you decide.</Text>
+              )}
+              <View style={styles.reviewActionRow}>
+                <Button
+                  label={busyAction === 'request-revision' ? 'Requesting…' : 'Request Revision'}
+                  variant="ghost"
+                  onPress={handleRequestRevision}
+                  disabled={busyAction === 'request-revision'}
+                  style={styles.reviewActionButton}
+                />
+                <Button
+                  label={busyAction === 'confirm-delivery' ? 'Confirming…' : "I'm Satisfied"}
+                  onPress={handleConfirmDelivery}
+                  disabled={busyAction === 'confirm-delivery'}
+                  style={styles.reviewActionButton}
+                />
+              </View>
+            </>
           )}
           {isBuyer && jobOrder.status === 'delivered' && jobOrder.buyerConfirmedAt !== null && (
             <View style={styles.confirmedRow}>
@@ -508,12 +513,26 @@ export default function JobOrderDetailScreen() {
           </>
         )}
 
-        {isBuyer && jobOrder.status === 'completed' && jobOrder.finalFilePath && (
-          <>
-            <Text style={styles.sectionLabel}>Final deliverable</Text>
-            <Button label="Download Final File" onPress={handleDownloadFinalFile} />
-          </>
-        )}
+        {isBuyer &&
+          (jobOrder.status === 'delivered' || jobOrder.status === 'revision' || jobOrder.status === 'completed') &&
+          jobOrder.finalFilePath && (
+            <>
+              <Text style={styles.sectionLabel}>Final deliverable</Text>
+              <View style={styles.card}>
+                <View style={styles.fileRow}>
+                  <Ionicons name="document-attach-outline" size={18} color={colors.ink} />
+                  <Text style={styles.fileName} numberOfLines={1}>
+                    {jobOrder.finalFileName}
+                  </Text>
+                </View>
+                <Button
+                  label="Download Final File"
+                  onPress={handleDownloadFinalFile}
+                  style={styles.milestoneActionButton}
+                />
+              </View>
+            </>
+          )}
 
         {needsShippingAddress && (
           <>
