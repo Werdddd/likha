@@ -4,11 +4,13 @@ import type {
   Comment,
   Conversation,
   Creator,
+  CreatorOrder,
   Listing,
   Message,
   Notification,
   NotificationKind,
   Order,
+  OrderItem,
   OrderStatus,
   PaymentMethod,
   ProductCategory,
@@ -218,6 +220,7 @@ export interface OrderItemRow {
   cover_url: string | null;
   price: number | string;
   quantity: number;
+  product_type: string;
 }
 
 export interface OrderRow {
@@ -227,6 +230,8 @@ export interface OrderRow {
   total: number | string;
   status: string;
   payment_method: string;
+  payment_proof_path: string | null;
+  payment_verified: boolean;
   address: Address | null;
   created_at: string;
   order_items?: OrderItemRow[];
@@ -241,15 +246,71 @@ export function orderRowToOrder(row: OrderRow): Order {
       coverUrl: item.cover_url ?? '',
       price: Number(item.price),
       quantity: item.quantity,
+      productType: item.product_type as ProductType,
     })),
     subtotal: Number(row.subtotal),
     shippingFee: Number(row.shipping_fee),
     total: Number(row.total),
     address: row.address,
     paymentMethod: row.payment_method as PaymentMethod,
+    paymentProofPath: row.payment_proof_path,
+    paymentVerified: row.payment_verified,
     status: row.status as OrderStatus,
     createdAt: row.created_at,
   };
+}
+
+export interface CreatorOrderItemRow {
+  id: string;
+  order_id: string;
+  listing_id: string | null;
+  title: string;
+  cover_url: string | null;
+  price: number | string;
+  quantity: number;
+  product_type: string;
+  orders: {
+    id: string;
+    status: string;
+    address: Address | null;
+    payment_method: string;
+    payment_proof_path: string | null;
+    payment_verified: boolean;
+    created_at: string;
+  };
+}
+
+export function creatorOrderItemRowsToCreatorOrders(rows: CreatorOrderItemRow[]): CreatorOrder[] {
+  const byOrder = new Map<string, CreatorOrder>();
+
+  for (const row of rows) {
+    const item: OrderItem = {
+      listingId: row.listing_id ?? '',
+      title: row.title,
+      coverUrl: row.cover_url ?? '',
+      price: Number(row.price),
+      quantity: row.quantity,
+      productType: row.product_type as ProductType,
+    };
+
+    const existing = byOrder.get(row.order_id);
+    if (existing) {
+      existing.items.push(item);
+    } else {
+      byOrder.set(row.order_id, {
+        id: row.order_id,
+        status: row.orders.status as OrderStatus,
+        createdAt: row.orders.created_at,
+        address: row.orders.address,
+        paymentMethod: row.orders.payment_method as PaymentMethod,
+        paymentProofPath: row.orders.payment_proof_path,
+        paymentVerified: row.orders.payment_verified,
+        items: [item],
+      });
+    }
+  }
+
+  return Array.from(byOrder.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export interface MessageRow {

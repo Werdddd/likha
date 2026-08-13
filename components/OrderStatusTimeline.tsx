@@ -2,19 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, type as t } from '../constants/theme';
-import { ORDER_STATUS_STEPS } from '../lib/order-status';
+import { getOrderStatusSteps } from '../lib/order-status';
 import type { OrderStatus } from '../types';
 
 interface OrderStatusTimelineProps {
   status: OrderStatus;
+  hasPhysicalItems?: boolean;
 }
 
-export function OrderStatusTimeline({ status }: OrderStatusTimelineProps) {
-  const currentIndex = ORDER_STATUS_STEPS.findIndex((step) => step.status === status);
+export function OrderStatusTimeline({ status, hasPhysicalItems = true }: OrderStatusTimelineProps) {
+  const steps = getOrderStatusSteps(hasPhysicalItems);
+  const currentIndex = steps.findIndex((step) => step.status === status);
 
   return (
     <View style={styles.row}>
-      {ORDER_STATUS_STEPS.map((step, index) => {
+      {steps.map((step, index) => {
         const reached = index <= currentIndex;
         return (
           <View key={step.status} style={styles.stepWrap}>
@@ -22,7 +24,7 @@ export function OrderStatusTimeline({ status }: OrderStatusTimelineProps) {
               <View style={[styles.dot, reached && styles.dotReached]}>
                 {reached && <Ionicons name="checkmark" size={11} color={colors.canvas} />}
               </View>
-              {index < ORDER_STATUS_STEPS.length - 1 && (
+              {index < steps.length - 1 && (
                 <View style={[styles.line, index < currentIndex && styles.lineReached]} />
               )}
             </View>

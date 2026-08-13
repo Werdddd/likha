@@ -6,11 +6,13 @@ import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable } from '../../components/ui';
+import { ImagePreviewModal } from '../../components/ImagePreviewModal';
 import { OrderStatusTimeline } from '../../components/OrderStatusTimeline';
+import { ProductTypeTag } from '../../components/ProductTypeTag';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { formatPrice } from '../../lib/format';
-import { orderStatusLabel } from '../../lib/order-status';
-import { useListingStore } from '../../store/listing-store';
+import { isTerminalStatus, orderHasPhysicalItems, orderStatusColor, orderStatusLabel } from '../../lib/order-status';
+import { getSignedUrl } from '../../lib/upload';
 import { useOrderStore } from '../../store/order-store';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -24,19 +26,23 @@ export default function OrderDetailScreen() {
   const order = useOrderStore((s) => s.orders.find((o) => o.id === id));
   const fetchOrders = useOrderStore((s) => s.fetchOrders);
   const getDigitalDownloadUrl = useOrderStore((s) => s.getDigitalDownloadUrl);
-  const listingsById = useListingStore((s) => s.listingsById);
-  const fetchListingById = useListingStore((s) => s.fetchById);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [isLoadingProof, setIsLoadingProof] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!order) fetchOrders();
   }, [order, fetchOrders]);
 
   useEffect(() => {
-    order?.items.forEach((item) => {
-      if (item.listingId) fetchListingById(item.listingId);
+    if (!order?.paymentProofPath) return;
+    setIsLoadingProof(true);
+    getSignedUrl('payment-proofs', order.paymentProofPath).then((url) => {
+      setProofUrl(url);
+      setIsLoadingProof(false);
     });
-  }, [order, fetchListingById]);
+  }, [order?.paymentProofPath]);
 
   if (!order) {
     return (
@@ -59,6 +65,10 @@ export default function OrderDetailScreen() {
     Linking.openURL(url);
   };
 
+  const hasPhysicalItems = orderHasPhysicalItems(order.items);
+  const terminal = isTerminalStatus(order.status);
+  const badgeColor = orderStatusColor(order.status);
+
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: `Order #${order.id.slice(-6)}` }} />
@@ -66,14 +76,29 @@ export default function OrderDetailScreen() {
         <Text style={styles.orderDate}>Placed {new Date(order.createdAt).toLocaleString()}</Text>
 
         <View style={styles.card}>
-          <OrderStatusTimeline status={order.status} />
-          <Text style={styles.statusText}>Status: {orderStatusLabel(order.status)}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: badgeColor.bg }]}>
+            <Text style={[styles.statusBadgeText, { color: badgeColor.fg }]}>
+              {orderStatusLabel(order.status, hasPhysicalItems)}
+            </Text>
+          </View>
+          {terminal ? (
+            <Text style={styles.terminalText}>
+              {order.status === 'rejected'
+                ? 'The seller was unable to fulfill this order and rejected it.'
+                : 'This order was cancelled.'}
+            </Text>
+          ) : (
+            <View style={styles.timelineWrap}>
+              <OrderStatusTimeline status={order.status} hasPhysicalItems={hasPhysicalItems} />
+            </View>
+          )}
         </View>
 
         <Text style={styles.sectionLabel}>Items</Text>
         <View style={styles.card}>
           {order.items.map((item, index) => {
-            const isDigital = listingsById[item.listingId]?.productType === 'digital';
+            const isDigital = item.productType === 'digital';
+            const canDownload = isDigital && order.status === 'delivered';
             return (
               <View
                 key={item.listingId}
@@ -87,7 +112,8 @@ export default function OrderDetailScreen() {
                   <Text style={styles.itemMeta}>
                     {item.quantity} × {formatPrice(item.price)}
                   </Text>
-                  {isDigital && (
+                  <ProductTypeTag productType={item.productType} />
+                  {canDownload ? (
                     <AnimatedPressable
                       style={styles.downloadButton}
                       scaleTo={0.95}
@@ -103,6 +129,14 @@ export default function OrderDetailScreen() {
                         </>
                       )}
                     </AnimatedPressable>
+                  ) : (
+                    isDigital &&
+                    !isTerminalStatus(order.status) && (
+                      <View style={styles.downloadPending}>
+                        <Ionicons name="time-outline" size={12} color={colors.warmBrown} />
+                        <Text style={styles.downloadPendingLabel}>Available once the seller completes this order</Text>
+                      </View>
+                    )
                   )}
                 </View>
                 <Text style={styles.itemTotal}>{formatPrice(item.price * item.quantity)}</Text>
@@ -138,11 +172,36 @@ export default function OrderDetailScreen() {
           </>
         )}
 
-        <Text style={styles.sectionLabel}>Payment method</Text>
+        <Text style={styles.sectionLabel}>Payment</Text>
         <View style={styles.card}>
           <Text style={styles.addressLine}>{PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}</Text>
+          <View style={styles.verifiedRow}>
+            <Ionicons
+              name={order.paymentVerified ? 'checkmark-circle' : 'time-outline'}
+              size={15}
+              color={order.paymentVerified ? colors.golden : colors.warmBrown}
+            />
+            <Text style={[styles.verifiedText, order.paymentVerified && styles.verifiedTextDone]}>
+              {order.paymentVerified ? 'Payment verified by seller' : 'Awaiting seller verification'}
+            </Text>
+          </View>
+          {isLoadingProof ? (
+            <ActivityIndicator size="small" color={colors.ink} style={styles.proofImage} />
+          ) : (
+            proofUrl && (
+              <AnimatedPressable onPress={() => setIsPreviewOpen(true)} scaleTo={0.98}>
+                <Image source={{ uri: proofUrl }} style={styles.proofImage} contentFit="cover" />
+                <View style={styles.expandHint}>
+                  <Ionicons name="expand-outline" size={13} color={colors.white} />
+                  <Text style={styles.expandHintText}>Tap to view</Text>
+                </View>
+              </AnimatedPressable>
+            )
+          )}
         </View>
       </ScrollView>
+
+      <ImagePreviewModal visible={isPreviewOpen} uri={proofUrl} onClose={() => setIsPreviewOpen(false)} />
     </SafeAreaView>
   );
 }
@@ -173,11 +232,23 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     ...shadow.sm,
   },
-  statusText: {
+  statusBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  statusBadgeText: {
+    ...t.caption,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+  },
+  terminalText: {
     ...t.bodyMedium,
-    color: colors.ink,
+    color: colors.terracotta,
     marginTop: spacing.md,
-    textAlign: 'center',
+  },
+  timelineWrap: {
+    marginTop: spacing.md,
   },
   itemRow: {
     flexDirection: 'row',
@@ -223,6 +294,20 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_600SemiBold',
     color: colors.ink,
   },
+  downloadPending: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    marginTop: spacing.xs,
+    maxWidth: 180,
+  },
+  downloadPendingLabel: {
+    ...t.caption,
+    fontSize: 11,
+    color: colors.warmBrown,
+    flexShrink: 1,
+  },
   itemTotal: {
     ...t.body,
     color: colors.ink,
@@ -261,6 +346,44 @@ const styles = StyleSheet.create({
     ...t.body,
     color: colors.warmBrown,
     marginTop: 2,
+  },
+  verifiedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.sm,
+  },
+  verifiedText: {
+    ...t.caption,
+    color: colors.warmBrown,
+  },
+  verifiedTextDone: {
+    color: colors.golden,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+  },
+  proofImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: radius.md,
+    backgroundColor: colors.softGray,
+    marginTop: spacing.md,
+  },
+  expandHint: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.ink + 'B3',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  expandHintText: {
+    ...t.caption,
+    fontSize: 11,
+    color: colors.white,
   },
   body: {
     ...t.body,

@@ -108,7 +108,7 @@ export interface Address {
   postalCode: string;
 }
 
-export type PaymentMethod = 'cod' | 'gcash' | 'card';
+export type PaymentMethod = 'gcash' | 'card';
 
 export interface OrderItem {
   listingId: string;
@@ -116,9 +116,10 @@ export interface OrderItem {
   coverUrl: string;
   price: number;
   quantity: number;
+  productType: ProductType;
 }
 
-export type OrderStatus = 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus = 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'rejected';
 
 export interface Order {
   id: string;
@@ -128,8 +129,37 @@ export interface Order {
   total: number;
   address: Address | null;
   paymentMethod: PaymentMethod;
+  paymentProofPath: string | null;
+  paymentVerified: boolean;
   status: OrderStatus;
   createdAt: string;
+}
+
+export interface CreatorOrder {
+  id: string;
+  status: OrderStatus;
+  createdAt: string;
+  address: Address | null;
+  paymentMethod: PaymentMethod;
+  paymentProofPath: string | null;
+  paymentVerified: boolean;
+  items: OrderItem[];
+}
+
+export interface TopListing {
+  listingId: string;
+  title: string;
+  coverUrl: string;
+  unitsSold: number;
+  revenue: number;
+}
+
+export interface DashboardStats {
+  revenue: number;
+  ordersCount: number;
+  itemsSold: number;
+  listingsCount: number;
+  topListings: TopListing[];
 }
 
 export type NotificationKind = 'appreciation' | 'follow' | 'comment';

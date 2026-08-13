@@ -6,7 +6,7 @@ import { Alert } from 'react-native';
 
 import { supabase } from './supabase/client';
 
-async function uploadAsset(
+async function uploadAssetRaw(
   bucket: string,
   userId: string,
   prefix: string,
@@ -27,6 +27,17 @@ async function uploadAsset(
     return null;
   }
 
+  return path;
+}
+
+async function uploadAsset(
+  bucket: string,
+  userId: string,
+  prefix: string,
+  asset: ImagePicker.ImagePickerAsset,
+): Promise<string | null> {
+  const path = await uploadAssetRaw(bucket, userId, prefix, asset);
+  if (!path) return null;
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 }
 
@@ -123,4 +134,42 @@ export async function pickAndUploadDocument(
   }
 
   return { path, fileName: asset.name };
+}
+
+/**
+ * Opens the image library, uploads the selected image to a **private** bucket, and returns its
+ * storage path (not a public URL) plus the picked asset's local URI for an immediate preview.
+ * Viewing it later requires a signed URL — see `getSignedUrl`.
+ */
+export async function pickAndUploadPrivateImage(
+  bucket: string,
+  userId: string,
+  prefix: string,
+): Promise<{ path: string; previewUri: string } | null> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    Alert.alert('Permission needed', 'Allow photo library access to upload an image.');
+    return null;
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    base64: true,
+    quality: 0.8,
+  });
+
+  const asset = result.canceled ? null : result.assets[0];
+  if (!asset) return null;
+
+  const path = await uploadAssetRaw(bucket, userId, prefix, asset);
+  if (!path) return null;
+
+  return { path, previewUri: asset.uri };
+}
+
+/** Generates a short-lived signed URL for an object in a private bucket. */
+export async function getSignedUrl(bucket: string, path: string, expiresInSeconds = 600): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresInSeconds);
+  if (error || !data) return null;
+  return data.signedUrl;
 }

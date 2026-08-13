@@ -5,5 +5,7 @@ export { Chip } from './Chip';
 export { CheckboxSelectField } from './CheckboxSelectField';
 export { MultiSelectField } from './MultiSelectField';
 export { QuantityStepper } from './QuantityStepper';
+export { SegmentedControl } from './SegmentedControl';
 export { SelectField } from './SelectField';
+export { TabRow } from './TabRow';
 export { TextField } from './TextField';

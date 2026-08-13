@@ -13,6 +13,7 @@ interface PlaceOrderInput {
   total: number;
   address: Address | null;
   paymentMethod: PaymentMethod;
+  paymentProofPath: string;
 }
 
 interface OrderState {
@@ -50,6 +51,7 @@ export const useOrderStore = create<OrderState>((set) => ({
         shipping_fee: input.shippingFee,
         total: input.total,
         payment_method: input.paymentMethod,
+        payment_proof_path: input.paymentProofPath,
         address: input.address,
       })
       .select()
@@ -68,6 +70,7 @@ export const useOrderStore = create<OrderState>((set) => ({
         cover_url: item.coverUrl,
         price: item.price,
         quantity: item.quantity,
+        product_type: item.productType,
       })),
     );
     if (itemsError) return { order: null, error: itemsError.message };

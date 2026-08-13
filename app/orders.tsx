@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnimatedPressable, Button } from '../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { formatPrice } from '../lib/format';
-import { orderStatusLabel } from '../lib/order-status';
+import { orderHasPhysicalItems, orderStatusColor, orderStatusLabel } from '../lib/order-status';
 import { useOrderStore } from '../store/order-store';
 
 export default function OrdersScreen() {
@@ -38,6 +38,10 @@ export default function OrdersScreen() {
       <View style={styles.list}>
         {orders.map((order) => {
           const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+          const hasPhysicalItems = orderHasPhysicalItems(order.items);
+          const hasDigitalItems = order.items.some((item) => item.productType === 'digital');
+          const orderKind = hasPhysicalItems && hasDigitalItems ? 'Mixed' : hasPhysicalItems ? 'Physical' : 'Digital';
+          const badgeColor = orderStatusColor(order.status);
           return (
             <AnimatedPressable
               key={order.id}
@@ -47,12 +51,14 @@ export default function OrdersScreen() {
             >
               <View style={styles.cardTop}>
                 <Text style={styles.orderDate}>{new Date(order.createdAt).toLocaleDateString()}</Text>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusLabel}>{orderStatusLabel(order.status)}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: badgeColor.bg }]}>
+                  <Text style={[styles.statusLabel, { color: badgeColor.fg }]}>
+                    {orderStatusLabel(order.status, hasPhysicalItems)}
+                  </Text>
                 </View>
               </View>
               <Text style={styles.orderMeta}>
-                {itemCount} item{itemCount === 1 ? '' : 's'} · {formatPrice(order.total)}
+                {itemCount} item{itemCount === 1 ? '' : 's'} · {formatPrice(order.total)} · {orderKind}
               </Text>
               <Text style={styles.itemPreview} numberOfLines={1}>
                 {order.items.map((item) => item.title).join(', ')}
