@@ -4,6 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 
+import { checkImageMetadata } from './ai-detection';
 import { supabase } from './supabase/client';
 
 async function uploadAssetRaw(
@@ -98,6 +99,81 @@ export async function pickAndUploadImages(
 
   const urls = await Promise.all(result.assets.map((asset) => uploadAsset(bucket, userId, prefix, asset)));
   return urls.filter((url): url is string => url !== null);
+}
+
+export interface UploadedImageResult {
+  url: string;
+  flagged: boolean;
+  matchedSignal: string | null;
+  hasExif: boolean;
+}
+
+/**
+ * Like `pickAndUploadImages`, but also runs the Layer 1 AI-image-detection metadata
+ * check (see `lib/ai-detection.ts`) on each asset before uploading it, so the caller
+ * can decide whether the resulting post/listing should publish immediately or go to
+ * "pending review". Used only by the Post a Project / Add a Product flows -- other
+ * upload paths (avatar, job post reference images) aren't in scope for detection and
+ * keep using `pickAndUploadImages`.
+ *
+ * Deliberately does **not** pass `quality` (or `base64: true`) to the picker: asking
+ * the picker to compress forces a decode-and-re-encode pass through the platform's
+ * bitmap APIs, which only carries over well-known metadata (standard EXIF) and quietly
+ * drops anything else -- including the non-standard PNG chunks some AI tools use to
+ * embed a C2PA manifest, which is exactly what Layer 1 needs to see. Reading the file
+ * straight off `asset.uri` via `expo-file-system` instead gets the untouched original
+ * bytes, same as `pickAndUploadDocument` already does for arbitrary files below.
+ *
+ * Decodes each asset's base64 exactly once and reuses those bytes for both the
+ * metadata scan and the storage upload, instead of going through `uploadAssetRaw`
+ * (which would decode a second time) -- doubling that synchronous decode per image
+ * would add visible jank, which the "clean uploads publish with no visible delay"
+ * requirement rules out.
+ */
+export async function pickAndUploadImagesChecked(
+  bucket: string,
+  userId: string,
+  prefix: string,
+  selectionLimit = 10,
+): Promise<UploadedImageResult[]> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    Alert.alert('Permission needed', 'Allow photo library access to upload images.');
+    return [];
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsMultipleSelection: true,
+    selectionLimit,
+  });
+
+  if (result.canceled || result.assets.length === 0) return [];
+
+  const uploaded = await Promise.all(
+    result.assets.map(async (asset): Promise<UploadedImageResult | null> => {
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+      const bytes = new Uint8Array(decode(base64));
+      const metadata = checkImageMetadata(bytes);
+
+      const extension = asset.mimeType?.split('/')[1] ?? 'jpg';
+      const path = `${userId}/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+
+      const { error } = await supabase.storage.from(bucket).upload(path, bytes, {
+        contentType: asset.mimeType ?? 'image/jpeg',
+        upsert: true,
+      });
+      if (error) {
+        Alert.alert('Upload failed', error.message);
+        return null;
+      }
+
+      const url = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+      return { url, flagged: metadata.aiDeclared, matchedSignal: metadata.matchedSignal, hasExif: metadata.hasExif };
+    }),
+  );
+
+  return uploaded.filter((u): u is UploadedImageResult => u !== null);
 }
 
 /**

@@ -109,6 +109,31 @@ export default function ListingDetailScreen() {
         </Animated.View>
 
         <View style={styles.content}>
+          {isOwner && listing.moderationStatus !== 'clean' && listing.moderationStatus !== 'approved' && (
+            <View
+              style={[
+                styles.inactiveBanner,
+                listing.moderationStatus === 'pending_review' && styles.pendingBanner,
+              ]}
+            >
+              <Ionicons
+                name={listing.moderationStatus === 'rejected' ? 'close-circle-outline' : 'time-outline'}
+                size={14}
+                color={listing.moderationStatus === 'rejected' ? colors.terracotta : colors.warmBrown}
+              />
+              <Text
+                style={[
+                  styles.inactiveBannerLabel,
+                  listing.moderationStatus === 'pending_review' && styles.pendingBannerLabel,
+                ]}
+              >
+                {listing.moderationStatus === 'rejected'
+                  ? 'Rejected — not visible to buyers.'
+                  : 'Pending review — only visible to you until approved.'}
+              </Text>
+            </View>
+          )}
+
           {isOwner && !listing.isActive && (
             <View style={styles.inactiveBanner}>
               <Ionicons name="eye-off-outline" size={14} color={colors.terracotta} />
@@ -250,6 +275,12 @@ const styles = StyleSheet.create({
   inactiveBannerLabel: {
     ...t.caption,
     color: colors.terracotta,
+  },
+  pendingBanner: {
+    backgroundColor: colors.likhaYellow + '33',
+  },
+  pendingBannerLabel: {
+    color: colors.warmBrown,
   },
   titleRow: {
     flexDirection: 'row',

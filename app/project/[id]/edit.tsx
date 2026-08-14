@@ -36,12 +36,21 @@ export default function EditProjectScreen() {
         .map((m) => m.trim())
         .filter(Boolean),
       mediaUrls: values.media,
+      // Only ever escalate into review -- never sent when clean, so an edit that
+      // doesn't touch media can't accidentally clear an existing pending/rejected
+      // status back to clean.
+      moderationStatus: values.hasFlaggedMedia ? 'pending_review' : undefined,
+      moderationReason: values.hasFlaggedMedia ? values.moderationReason : undefined,
     });
     setIsSubmitting(false);
 
     if (!updated) {
       Alert.alert('Could not save changes', error ?? 'Please try again.');
       return;
+    }
+
+    if (values.hasFlaggedMedia) {
+      Alert.alert('Submitted for review', "This won't be visible to others until an admin reviews it.");
     }
     router.back();
   };

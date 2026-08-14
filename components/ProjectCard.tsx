@@ -8,6 +8,7 @@ import { pseudoRatioForId } from '../lib/masonry';
 import type { Creator, Listing, Project } from '../types';
 import { AnimatedPressable } from './ui/AnimatedPressable';
 import { Avatar } from './ui/Avatar';
+import { Badge } from './ui/Badge';
 
 interface ProjectCardProps {
   project: Project;
@@ -42,6 +43,17 @@ export function ProjectCard({ project, creator, listing, onPress }: ProjectCardP
           {project.title}
         </Text>
       </View>
+
+      {/* Only ever populated for rows the viewer is allowed to see un-approved (their
+          own, or an admin) -- RLS never returns pending/rejected rows to anyone else. */}
+      {(project.moderationStatus === 'pending_review' || project.moderationStatus === 'rejected') && (
+        <View style={styles.moderationBadgeWrap}>
+          <Badge
+            label={project.moderationStatus === 'rejected' ? 'Rejected' : 'Pending review'}
+            tone="muted"
+          />
+        </View>
+      )}
 
       <View style={styles.reactionBadge}>
         <Ionicons name="heart" size={11} color={colors.likhaYellow} />
@@ -98,6 +110,12 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_700Bold',
     color: colors.white,
     ...textShadow,
+  },
+  moderationBadgeWrap: {
+    position: 'absolute',
+    top: spacing.xs + 2,
+    right: spacing.xs + 2,
+    ...shadow.sm,
   },
   reactionBadge: {
     position: 'absolute',

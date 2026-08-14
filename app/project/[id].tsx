@@ -108,6 +108,26 @@ export default function ProjectDetailScreen() {
         </Animated.View>
 
         <View style={styles.content}>
+          {currentUserId === project.creatorId && project.moderationStatus !== 'clean' && project.moderationStatus !== 'approved' && (
+            <View style={[styles.moderationBanner, project.moderationStatus === 'rejected' && styles.moderationBannerRejected]}>
+              <Ionicons
+                name={project.moderationStatus === 'rejected' ? 'close-circle-outline' : 'time-outline'}
+                size={16}
+                color={project.moderationStatus === 'rejected' ? colors.terracotta : colors.warmBrown}
+              />
+              <Text
+                style={[
+                  styles.moderationBannerText,
+                  project.moderationStatus === 'rejected' && styles.moderationBannerTextRejected,
+                ]}
+              >
+                {project.moderationStatus === 'rejected'
+                  ? 'Rejected — not visible to others.'
+                  : 'Pending review — only visible to you until approved.'}
+              </Text>
+            </View>
+          )}
+
           <Text style={styles.title}>{project.title}</Text>
 
           {creator && (
@@ -217,6 +237,27 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+  },
+  moderationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.likhaYellow + '33',
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  moderationBannerRejected: {
+    backgroundColor: colors.terracotta + '1a',
+  },
+  moderationBannerText: {
+    ...t.caption,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.warmBrown,
+    flex: 1,
+  },
+  moderationBannerTextRejected: {
+    color: colors.terracotta,
   },
   title: {
     ...t.h1,

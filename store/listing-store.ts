@@ -19,6 +19,8 @@ interface CreateListingInput {
   imageUrls: string[];
   digitalFilePath?: string;
   digitalFileName?: string;
+  moderationStatus: 'clean' | 'pending_review';
+  moderationReason?: string;
 }
 
 interface UpdateListingInput {
@@ -32,6 +34,8 @@ interface UpdateListingInput {
   imageUrls: string[];
   digitalFilePath?: string;
   digitalFileName?: string;
+  moderationStatus?: 'clean' | 'pending_review';
+  moderationReason?: string;
 }
 
 interface ListingState {
@@ -41,6 +45,8 @@ interface ListingState {
   fetchByCreator: (creatorId: string) => Promise<Listing[]>;
   fetchMyListings: (creatorId: string) => Promise<Listing[]>;
   fetchById: (id: string) => Promise<Listing | null>;
+  fetchPendingListings: () => Promise<Listing[]>;
+  moderateListing: (id: string, decision: 'approved' | 'rejected') => Promise<{ error: string | null }>;
   createListing: (
     creatorId: string,
     input: CreateListingInput,
@@ -123,6 +129,28 @@ export const useListingStore = create<ListingState>((set, get) => {
       return listingRowToListing(row);
     },
 
+    fetchPendingListings: async () => {
+      const { data, error } = await supabase
+        .from('listings')
+        .select(LISTING_SELECT)
+        .eq('moderation_status', 'pending_review')
+        .order('created_at', { ascending: false });
+      if (error || !data) return [];
+      const rows = data as ListingRow[];
+      upsertRows(rows);
+      return rows.map(listingRowToListing);
+    },
+
+    moderateListing: async (id, decision) => {
+      const { data, error } = await supabase.rpc('moderate_listing', {
+        p_listing_id: id,
+        p_decision: decision,
+      });
+      if (error) return { error: error.message };
+      if (data) upsertRows([data as ListingRow]);
+      return { error: null };
+    },
+
     createListing: async (creatorId, input) => {
       const { data: listingData, error: listingError } = await supabase
         .from('listings')
@@ -139,6 +167,8 @@ export const useListingStore = create<ListingState>((set, get) => {
           digital_file_path: input.digitalFilePath ?? null,
           digital_file_name: input.digitalFileName ?? null,
           cover_url: input.imageUrls[0] ?? null,
+          moderation_status: input.moderationStatus,
+          moderation_reason: input.moderationReason ?? null,
         })
         .select()
         .single();
@@ -164,21 +194,22 @@ export const useListingStore = create<ListingState>((set, get) => {
     },
 
     updateListing: async (listingId, input) => {
-      const { error: listingError } = await supabase
-        .from('listings')
-        .update({
-          project_id: input.projectId ?? null,
-          title: input.title,
-          description: input.description,
-          price: input.price,
-          category: input.category,
-          tags: input.tags,
-          stock: input.stock,
-          digital_file_path: input.digitalFilePath ?? null,
-          digital_file_name: input.digitalFileName ?? null,
-          cover_url: input.imageUrls[0] ?? null,
-        })
-        .eq('id', listingId);
+      const row: Record<string, unknown> = {
+        project_id: input.projectId ?? null,
+        title: input.title,
+        description: input.description,
+        price: input.price,
+        category: input.category,
+        tags: input.tags,
+        stock: input.stock,
+        digital_file_path: input.digitalFilePath ?? null,
+        digital_file_name: input.digitalFileName ?? null,
+        cover_url: input.imageUrls[0] ?? null,
+      };
+      if (input.moderationStatus !== undefined) row.moderation_status = input.moderationStatus;
+      if (input.moderationReason !== undefined) row.moderation_reason = input.moderationReason;
+
+      const { error: listingError } = await supabase.from('listings').update(row).eq('id', listingId);
       if (listingError) return { listing: null, error: listingError.message };
 
       const { error: deleteImagesError } = await supabase

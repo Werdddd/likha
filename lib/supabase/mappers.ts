@@ -19,6 +19,7 @@ import type {
   Message,
   MilestoneKind,
   MilestoneStatus,
+  ModerationStatus,
   Notification,
   NotificationKind,
   Order,
@@ -28,6 +29,7 @@ import type {
   ProductCategory,
   ProductType,
   ProfileMode,
+  ProfileRole,
   Project,
   ProjectMedia,
   Region,
@@ -48,6 +50,7 @@ export interface ProfileRow {
   follower_count: number;
   following_count: number;
   project_count: number;
+  role: string;
 }
 
 export function profileRowToCreator(row: ProfileRow): Creator {
@@ -66,6 +69,7 @@ export function profileRowToCreator(row: ProfileRow): Creator {
     followingCount: row.following_count,
     projectCount: row.project_count,
     badges: row.badges,
+    role: row.role as ProfileRole,
   };
 }
 
@@ -127,6 +131,8 @@ export interface ProjectRow {
   appreciation_count: number;
   comment_count: number;
   created_at: string;
+  moderation_status: string;
+  moderation_reason: string | null;
   profiles?: ProfileRow | null;
   project_media?: ProjectMediaRow[];
 }
@@ -155,6 +161,8 @@ export function projectRowToProject(row: ProjectRow): Project {
     appreciations: row.appreciation_count,
     commentCount: row.comment_count,
     createdAt: row.created_at,
+    moderationStatus: row.moderation_status as ModerationStatus,
+    moderationReason: row.moderation_reason ?? undefined,
   };
 }
 
@@ -198,6 +206,8 @@ export interface ListingRow {
   digital_file_name: string | null;
   is_active: boolean;
   created_at: string;
+  moderation_status: string;
+  moderation_reason: string | null;
   profiles?: ProfileRow | null;
   listing_images?: ListingImageRow[];
 }
@@ -225,6 +235,8 @@ export function listingRowToListing(row: ListingRow): Listing {
     digitalFileName: row.digital_file_name ?? undefined,
     isActive: row.is_active,
     createdAt: row.created_at,
+    moderationStatus: row.moderation_status as ModerationStatus,
+    moderationReason: row.moderation_reason ?? undefined,
   };
 }
 
@@ -379,6 +391,7 @@ export interface NotificationRow {
   project_id: string | null;
   job_post_id: string | null;
   job_order_id: string | null;
+  listing_id: string | null;
   read: boolean;
   created_at: string;
 }
@@ -391,6 +404,7 @@ export function notificationRowToNotification(row: NotificationRow): Notificatio
     projectId: row.project_id ?? undefined,
     jobPostId: row.job_post_id ?? undefined,
     jobOrderId: row.job_order_id ?? undefined,
+    listingId: row.listing_id ?? undefined,
     createdAt: row.created_at,
     read: row.read,
   };

@@ -55,6 +55,7 @@ export const creators: Creator[] = [
     followingCount: 214,
     projectCount: 18,
     badges: ['Top Seller', 'Verified ID'],
+    role: 'user',
   },
   {
     id: 'c2',
@@ -71,6 +72,7 @@ export const creators: Creator[] = [
     followingCount: 98,
     projectCount: 12,
     badges: ['Fast Responder'],
+    role: 'user',
   },
   {
     id: 'c3',
@@ -87,6 +89,7 @@ export const creators: Creator[] = [
     followingCount: 341,
     projectCount: 27,
     badges: ['Student'],
+    role: 'user',
   },
   {
     id: 'c4',
@@ -103,6 +106,7 @@ export const creators: Creator[] = [
     followingCount: 120,
     projectCount: 9,
     badges: ['Top Seller'],
+    role: 'user',
   },
   {
     id: 'c5',
@@ -119,6 +123,7 @@ export const creators: Creator[] = [
     followingCount: 176,
     projectCount: 21,
     badges: ['Verified ID'],
+    role: 'user',
   },
   {
     id: 'c6',
@@ -135,6 +140,7 @@ export const creators: Creator[] = [
     followingCount: 88,
     projectCount: 14,
     badges: [],
+    role: 'user',
   },
   {
     id: 'c7',
@@ -151,6 +157,7 @@ export const creators: Creator[] = [
     followingCount: 260,
     projectCount: 33,
     badges: ['Fast Responder'],
+    role: 'user',
   },
 ];
 
@@ -201,6 +208,7 @@ export const projects: Project[] = projectSeeds.map((seed, index) => {
     appreciations: 20 + index * 13,
     commentCount: 0,
     createdAt: new Date(2026, 0, 1 + index * 4).toISOString(),
+    moderationStatus: 'clean' as const,
   };
 });
 
@@ -249,6 +257,7 @@ export const listings: Listing[] = listingSeeds.map((seed, index) => {
     stock: seed.stock,
     isActive: true,
     createdAt: new Date(2026, 1, 1 + index * 5).toISOString(),
+    moderationStatus: 'clean' as const,
   };
 });
 

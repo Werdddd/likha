@@ -25,12 +25,18 @@ export default function NewProjectScreen() {
         .filter(Boolean),
       region: currentUser.region,
       mediaUrls: values.media,
+      moderationStatus: values.hasFlaggedMedia ? 'pending_review' : 'clean',
+      moderationReason: values.moderationReason,
     });
     setIsSubmitting(false);
 
     if (!project) {
       Alert.alert('Could not publish project', error ?? 'Please try again.');
       return;
+    }
+
+    if (project.moderationStatus === 'pending_review') {
+      Alert.alert('Submitted for review', "This won't be visible to others until an admin reviews it.");
     }
     router.back();
   };

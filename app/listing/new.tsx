@@ -27,12 +27,18 @@ export default function NewListingScreen() {
       imageUrls: values.images,
       digitalFilePath: values.digitalFilePath,
       digitalFileName: values.digitalFileName,
+      moderationStatus: values.hasFlaggedMedia ? 'pending_review' : 'clean',
+      moderationReason: values.moderationReason,
     });
     setIsSubmitting(false);
 
     if (!listing) {
       Alert.alert('Could not publish listing', error ?? 'Please try again.');
       return;
+    }
+
+    if (listing.moderationStatus === 'pending_review') {
+      Alert.alert('Submitted for review', "This won't be visible to buyers until an admin reviews it.");
     }
     router.back();
   };

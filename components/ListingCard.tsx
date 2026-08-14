@@ -8,6 +8,7 @@ import { pseudoRatioForId } from '../lib/masonry';
 import type { Creator, Listing } from '../types';
 import { AnimatedPressable } from './ui/AnimatedPressable';
 import { Avatar } from './ui/Avatar';
+import { Badge } from './ui/Badge';
 
 interface ListingCardProps {
   listing: Listing;
@@ -54,6 +55,17 @@ export function ListingCard({ listing, creator, onPress }: ListingCardProps) {
       <View style={styles.priceBadge}>
         <Text style={styles.priceLabel}>{formatPrice(listing.price)}</Text>
       </View>
+
+      {/* Only ever populated for rows the viewer is allowed to see un-approved (their
+          own, or an admin) -- RLS never returns pending/rejected rows to anyone else. */}
+      {(listing.moderationStatus === 'pending_review' || listing.moderationStatus === 'rejected') && (
+        <View style={styles.moderationBadgeWrap}>
+          <Badge
+            label={listing.moderationStatus === 'rejected' ? 'Rejected' : 'Pending review'}
+            tone="muted"
+          />
+        </View>
+      )}
     </AnimatedPressable>
   );
 }
@@ -112,6 +124,12 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_700Bold',
     color: colors.white,
     ...textShadow,
+  },
+  moderationBadgeWrap: {
+    position: 'absolute',
+    bottom: spacing.xs + 2,
+    left: spacing.xs + 2,
+    ...shadow.sm,
   },
   priceBadge: {
     position: 'absolute',

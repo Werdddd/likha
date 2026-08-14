@@ -20,6 +20,7 @@ const EMPTY_USER: Creator = {
   followingCount: 0,
   projectCount: 0,
   badges: [],
+  role: 'user',
 };
 
 interface SessionState {

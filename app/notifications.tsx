@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, AnimatedPressable } from '../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { useCreatorStore } from '../store/creator-store';
+import { useListingStore } from '../store/listing-store';
 import { useNotificationStore } from '../store/notification-store';
 import { useProjectStore } from '../store/project-store';
 import type { Notification, NotificationKind } from '../types';
@@ -25,6 +26,9 @@ const VERB: Record<NotificationKind, string> = {
   job_order_revision: 'requested a revision',
   job_order_delivered: 'marked your job order as delivered',
   job_order_cancelled: 'cancelled the job order',
+  content_flagged: 'submitted this for review',
+  content_approved: 'approved',
+  content_rejected: 'rejected',
 };
 
 const ICON: Record<NotificationKind, keyof typeof Ionicons.glyphMap> = {
@@ -41,6 +45,9 @@ const ICON: Record<NotificationKind, keyof typeof Ionicons.glyphMap> = {
   job_order_revision: 'refresh',
   job_order_delivered: 'cube',
   job_order_cancelled: 'ban',
+  content_flagged: 'shield-checkmark',
+  content_approved: 'checkmark-circle',
+  content_rejected: 'close-circle',
 };
 
 function timeAgo(iso: string) {
@@ -57,6 +64,7 @@ export default function NotificationsScreen() {
   const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
   const markAllRead = useNotificationStore((s) => s.markAllRead);
   const fetchProjectById = useProjectStore((s) => s.fetchById);
+  const fetchListingById = useListingStore((s) => s.fetchById);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -72,8 +80,9 @@ export default function NotificationsScreen() {
   useEffect(() => {
     notifications.forEach((n) => {
       if (n.projectId) fetchProjectById(n.projectId);
+      if (n.listingId) fetchListingById(n.listingId);
     });
-  }, [notifications, fetchProjectById]);
+  }, [notifications, fetchProjectById, fetchListingById]);
 
   useEffect(() => {
     if (notifications.some((n) => !n.read)) markAllRead();
@@ -99,7 +108,12 @@ function NotificationRow({ notification }: { notification: Notification }) {
   const project = useProjectStore((s) =>
     notification.projectId ? s.projectsById[notification.projectId] : undefined,
   );
+  const listing = useListingStore((s) =>
+    notification.listingId ? s.listingsById[notification.listingId] : undefined,
+  );
   if (!creator) return null;
+
+  const itemTitle = project?.title ?? listing?.title;
 
   return (
     <AnimatedPressable
@@ -109,6 +123,7 @@ function NotificationRow({ notification }: { notification: Notification }) {
         if (notification.jobOrderId) router.push(`/job-order/${notification.jobOrderId}`);
         else if (notification.jobPostId) router.push(`/job-post/${notification.jobPostId}`);
         else if (project) router.push(`/project/${project.id}`);
+        else if (listing) router.push(`/listing/${listing.id}`);
         else router.push(`/creator/${creator.id}`);
       }}
     >
@@ -122,7 +137,7 @@ function NotificationRow({ notification }: { notification: Notification }) {
       <View style={styles.info}>
         <Text style={styles.text}>
           <Text style={styles.name}>{creator.name}</Text> {VERB[notification.kind]}
-          {project ? ` "${project.title}"` : ''}
+          {itemTitle ? ` "${itemTitle}"` : ''}
         </Text>
         <Text style={styles.time}>{timeAgo(notification.createdAt)}</Text>
       </View>

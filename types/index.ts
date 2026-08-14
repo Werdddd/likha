@@ -19,6 +19,14 @@ export type Region =
 
 export type ProductType = 'digital' | 'physical';
 
+export type ProfileRole = 'user' | 'admin';
+
+/**
+ * Layer 1 AI-image-detection outcome. 'clean' publishes immediately; 'pending_review'
+ * is held out of public view until an admin decides 'approved' or 'rejected'.
+ */
+export type ModerationStatus = 'clean' | 'pending_review' | 'approved' | 'rejected';
+
 export type DigitalCategory =
   | 'Digital Art'
   | 'Templates'
@@ -47,6 +55,7 @@ export interface Creator {
   followingCount: number;
   projectCount: number;
   badges: string[];
+  role: ProfileRole;
 }
 
 export interface ProjectMedia {
@@ -69,6 +78,8 @@ export interface Project {
   appreciations: number;
   commentCount: number;
   createdAt: string;
+  moderationStatus: ModerationStatus;
+  moderationReason?: string;
 }
 
 export interface FilterState {
@@ -94,6 +105,8 @@ export interface Listing {
   digitalFileName?: string;
   isActive: boolean;
   createdAt: string;
+  moderationStatus: ModerationStatus;
+  moderationReason?: string;
 }
 
 export interface CartLine {
@@ -181,7 +194,10 @@ export type NotificationKind =
   | 'job_order_update'
   | 'job_order_revision'
   | 'job_order_delivered'
-  | 'job_order_cancelled';
+  | 'job_order_cancelled'
+  | 'content_flagged'
+  | 'content_approved'
+  | 'content_rejected';
 
 export interface Notification {
   id: string;
@@ -190,6 +206,7 @@ export interface Notification {
   projectId?: string;
   jobPostId?: string;
   jobOrderId?: string;
+  listingId?: string;
   createdAt: string;
   read: boolean;
 }

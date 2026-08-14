@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, spacing, type as t } from '../constants/theme';
-import { pickAndUploadImages } from '../lib/upload';
+import { pickAndUploadImagesChecked } from '../lib/upload';
 import { useSessionStore } from '../store/session-store';
 import { CategoryMultiSelectField } from './CategoryMultiSelectField';
 import { AnimatedPressable, Button, TextField } from './ui';
@@ -15,6 +15,8 @@ export interface ProjectFormValues {
   categories: string[];
   mediums: string;
   media: string[];
+  hasFlaggedMedia: boolean;
+  moderationReason?: string;
 }
 
 interface ProjectFormProps {
@@ -32,19 +34,39 @@ export function ProjectForm({ initialValues, submitLabel, onSubmit, isSubmitting
   const [mediums, setMediums] = useState(initialValues?.mediums ?? '');
   const [media, setMedia] = useState<string[]>(initialValues?.media ?? []);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  // Maps a currently-attached media URL to its detected AI-metadata signal, if any.
+  // Kept in sync with `media` (an entry is dropped when its thumbnail is removed) so
+  // submit only reflects what's actually still attached.
+  const [flaggedMedia, setFlaggedMedia] = useState<Record<string, string>>({});
 
   const canSubmit =
     title.trim().length > 0 && description.trim().length > 0 && categories.length > 0 && !isSubmitting;
 
   const handleAddMedia = async () => {
     setIsUploadingMedia(true);
-    const urls = await pickAndUploadImages('project-media', currentUserId, 'media');
+    const results = await pickAndUploadImagesChecked('project-media', currentUserId, 'media');
     setIsUploadingMedia(false);
-    if (urls.length > 0) setMedia((prev) => [...prev, ...urls]);
+    if (results.length === 0) return;
+
+    setMedia((prev) => [...prev, ...results.map((r) => r.url)]);
+    const newlyFlagged = results.filter((r) => r.flagged && r.matchedSignal);
+    if (newlyFlagged.length > 0) {
+      setFlaggedMedia((prev) => {
+        const next = { ...prev };
+        for (const r of newlyFlagged) next[r.url] = r.matchedSignal!;
+        return next;
+      });
+    }
   };
 
   const handleRemoveMedia = (url: string) => {
     setMedia((prev) => prev.filter((m) => m !== url));
+    setFlaggedMedia((prev) => {
+      if (!(url in prev)) return prev;
+      const next = { ...prev };
+      delete next[url];
+      return next;
+    });
   };
 
   return (
@@ -99,9 +121,18 @@ export function ProjectForm({ initialValues, submitLabel, onSubmit, isSubmitting
       <Button
         label={submitLabel}
         disabled={!canSubmit}
-        onPress={() =>
-          onSubmit({ title: title.trim(), description: description.trim(), categories, mediums, media })
-        }
+        onPress={() => {
+          const activeFlags = media.filter((url) => url in flaggedMedia).map((url) => flaggedMedia[url]);
+          onSubmit({
+            title: title.trim(),
+            description: description.trim(),
+            categories,
+            mediums,
+            media,
+            hasFlaggedMedia: activeFlags.length > 0,
+            moderationReason: activeFlags.length > 0 ? Array.from(new Set(activeFlags)).join('; ') : undefined,
+          });
+        }}
         style={styles.submit}
       />
     </ScrollView>

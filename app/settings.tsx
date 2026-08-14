@@ -27,6 +27,9 @@ export default function SettingsScreen() {
     { icon: 'person-outline', label: 'Edit Profile', onPress: () => router.push('/profile-edit') },
     { icon: 'receipt-outline', label: 'My Orders', onPress: () => router.push('/orders') },
     { icon: 'notifications-outline', label: 'Notifications', onPress: () => router.push('/notifications') },
+    ...(currentUser.role === 'admin'
+      ? [{ icon: 'shield-checkmark-outline' as const, label: 'Moderation Queue', onPress: () => router.push('/moderation') }]
+      : []),
   ];
 
   const sessionRows: SettingsRow[] = [

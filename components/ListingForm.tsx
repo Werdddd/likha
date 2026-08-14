@@ -5,7 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 
 import { digitalCategories, physicalCategories } from '../constants/mock-data';
 import { colors, radius, spacing, type as t } from '../constants/theme';
-import { pickAndUploadDocument, pickAndUploadImages } from '../lib/upload';
+import { pickAndUploadDocument, pickAndUploadImagesChecked } from '../lib/upload';
 import { useProjectStore } from '../store/project-store';
 import { useSessionStore } from '../store/session-store';
 import type { ProductCategory, ProductType } from '../types';
@@ -22,6 +22,8 @@ export interface ListingFormValues {
   images: string[];
   digitalFilePath?: string;
   digitalFileName?: string;
+  hasFlaggedMedia: boolean;
+  moderationReason?: string;
 }
 
 const PRODUCT_TYPES: Array<{ value: ProductType; label: string }> = [
@@ -33,7 +35,7 @@ interface ListingFormProps {
   submitLabel: string;
   onSubmit: (values: ListingFormValues) => void;
   isSubmitting?: boolean;
-  initialValues?: ListingFormValues;
+  initialValues?: Partial<ListingFormValues>;
   /** When editing, the product type is locked — switching digital/physical after publish would
    *  orphan the category taxonomy and file/stock requirements tied to the original type. */
   lockProductType?: boolean;
@@ -69,6 +71,8 @@ export function ListingForm({
   const [projectTitle, setProjectTitle] = useState(NO_PROJECT);
   const [images, setImages] = useState<string[]>(initialValues?.images ?? []);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+  // Maps a currently-attached image URL to its detected AI-metadata signal, if any.
+  const [flaggedImages, setFlaggedImages] = useState<Record<string, string>>({});
   const [digitalFile, setDigitalFile] = useState<{ path: string; fileName: string } | null>(
     initialValues?.digitalFilePath && initialValues?.digitalFileName
       ? { path: initialValues.digitalFilePath, fileName: initialValues.digitalFileName }
@@ -105,12 +109,30 @@ export function ListingForm({
 
   const handleAddImages = async () => {
     setIsUploadingImages(true);
-    const urls = await pickAndUploadImages('listing-media', currentUser.id, 'media');
+    const results = await pickAndUploadImagesChecked('listing-media', currentUser.id, 'media');
     setIsUploadingImages(false);
-    if (urls.length > 0) setImages((prev) => [...prev, ...urls]);
+    if (results.length === 0) return;
+
+    setImages((prev) => [...prev, ...results.map((r) => r.url)]);
+    const newlyFlagged = results.filter((r) => r.flagged && r.matchedSignal);
+    if (newlyFlagged.length > 0) {
+      setFlaggedImages((prev) => {
+        const next = { ...prev };
+        for (const r of newlyFlagged) next[r.url] = r.matchedSignal!;
+        return next;
+      });
+    }
   };
 
-  const handleRemoveImage = (url: string) => setImages((prev) => prev.filter((u) => u !== url));
+  const handleRemoveImage = (url: string) => {
+    setImages((prev) => prev.filter((u) => u !== url));
+    setFlaggedImages((prev) => {
+      if (!(url in prev)) return prev;
+      const next = { ...prev };
+      delete next[url];
+      return next;
+    });
+  };
 
   const handlePickDigitalFile = async () => {
     setIsUploadingFile(true);
@@ -121,6 +143,7 @@ export function ListingForm({
 
   const handleSubmit = () => {
     const linkedProject = myProjects.find((p) => p.title === projectTitle);
+    const activeFlags = images.filter((url) => url in flaggedImages).map((url) => flaggedImages[url]);
     onSubmit({
       title: title.trim(),
       description: description.trim(),
@@ -132,6 +155,8 @@ export function ListingForm({
       images,
       digitalFilePath: digitalFile?.path,
       digitalFileName: digitalFile?.fileName,
+      hasFlaggedMedia: activeFlags.length > 0,
+      moderationReason: activeFlags.length > 0 ? Array.from(new Set(activeFlags)).join('; ') : undefined,
     });
   };
 

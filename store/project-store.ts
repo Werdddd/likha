@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import { supabase } from '../lib/supabase/client';
 import { projectRowToProject, type ProfileRow, type ProjectRow } from '../lib/supabase/mappers';
-import type { Project, Region } from '../types';
+import type { ModerationStatus, Project, Region } from '../types';
 import { useCreatorStore } from './creator-store';
 
 const PROJECT_SELECT = '*, profiles!projects_creator_id_fkey(*), project_media(*)';
@@ -14,6 +14,8 @@ interface CreateProjectInput {
   mediums: string[];
   region: Region;
   mediaUrls: string[];
+  moderationStatus: 'clean' | 'pending_review';
+  moderationReason?: string;
 }
 
 interface UpdateProjectInput {
@@ -22,6 +24,8 @@ interface UpdateProjectInput {
   categories?: string[];
   mediums?: string[];
   mediaUrls?: string[];
+  moderationStatus?: 'clean' | 'pending_review';
+  moderationReason?: string;
 }
 
 interface ProjectState {
@@ -30,6 +34,8 @@ interface ProjectState {
   fetchFeed: () => Promise<void>;
   fetchByCreator: (creatorId: string) => Promise<Project[]>;
   fetchById: (id: string) => Promise<Project | null>;
+  fetchPendingReview: () => Promise<Project[]>;
+  moderateProject: (id: string, decision: 'approved' | 'rejected') => Promise<{ error: string | null }>;
   createProject: (
     creatorId: string,
     input: CreateProjectInput,
@@ -97,6 +103,28 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       return projectRowToProject(row);
     },
 
+    fetchPendingReview: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select(PROJECT_SELECT)
+        .eq('moderation_status', 'pending_review')
+        .order('created_at', { ascending: false });
+      if (error || !data) return [];
+      const rows = data as ProjectRow[];
+      upsertRows(rows);
+      return rows.map(projectRowToProject);
+    },
+
+    moderateProject: async (id, decision) => {
+      const { data, error } = await supabase.rpc('moderate_project', {
+        p_project_id: id,
+        p_decision: decision,
+      });
+      if (error) return { error: error.message };
+      if (data) upsertRows([data as ProjectRow]);
+      return { error: null };
+    },
+
     createProject: async (creatorId, input) => {
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
@@ -108,6 +136,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           mediums: input.mediums,
           region: input.region,
           cover_url: input.mediaUrls[0] ?? null,
+          moderation_status: input.moderationStatus,
+          moderation_reason: input.moderationReason ?? null,
         })
         .select()
         .single();
@@ -138,6 +168,8 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       if (input.description !== undefined) row.description = input.description;
       if (input.categories !== undefined) row.categories = input.categories;
       if (input.mediums !== undefined) row.mediums = input.mediums;
+      if (input.moderationStatus !== undefined) row.moderation_status = input.moderationStatus;
+      if (input.moderationReason !== undefined) row.moderation_reason = input.moderationReason;
 
       if (input.mediaUrls !== undefined) {
         row.cover_url = input.mediaUrls[0] ?? null;

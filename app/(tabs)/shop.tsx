@@ -592,21 +592,29 @@ function ListingsTab({
               </Text>
               <ProductTypeTag productType={listing.productType} />
             </View>
-            <AnimatedPressable
-              style={[styles.statusPill, listing.isActive ? styles.statusPillActive : styles.statusPillInactive]}
-              scaleTo={0.92}
-              disabled={updatingListingId === listing.id}
-              onPress={() => onToggleActive(listing)}
-            >
-              <Text
-                style={[
-                  styles.statusPillLabel,
-                  listing.isActive ? styles.statusPillLabelActive : styles.statusPillLabelInactive,
-                ]}
+            {listing.moderationStatus === 'pending_review' || listing.moderationStatus === 'rejected' ? (
+              <View style={[styles.statusPill, styles.statusPillModeration]}>
+                <Text style={[styles.statusPillLabel, styles.statusPillLabelModeration]}>
+                  {listing.moderationStatus === 'rejected' ? 'Rejected' : 'Pending review'}
+                </Text>
+              </View>
+            ) : (
+              <AnimatedPressable
+                style={[styles.statusPill, listing.isActive ? styles.statusPillActive : styles.statusPillInactive]}
+                scaleTo={0.92}
+                disabled={updatingListingId === listing.id}
+                onPress={() => onToggleActive(listing)}
               >
-                {updatingListingId === listing.id ? '…' : listing.isActive ? 'Active' : 'Inactive'}
-              </Text>
-            </AnimatedPressable>
+                <Text
+                  style={[
+                    styles.statusPillLabel,
+                    listing.isActive ? styles.statusPillLabelActive : styles.statusPillLabelInactive,
+                  ]}
+                >
+                  {updatingListingId === listing.id ? '…' : listing.isActive ? 'Active' : 'Inactive'}
+                </Text>
+              </AnimatedPressable>
+            )}
           </View>
         </AnimatedPressable>
       ))}
@@ -939,6 +947,12 @@ const styles = StyleSheet.create({
   },
   statusPillInactive: {
     backgroundColor: colors.softGray + '80',
+  },
+  statusPillModeration: {
+    backgroundColor: colors.terracotta + '1a',
+  },
+  statusPillLabelModeration: {
+    color: colors.terracotta,
   },
   statusPillLabel: {
     ...t.caption,
