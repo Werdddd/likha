@@ -20,6 +20,7 @@ export default function SettingsScreen() {
 
   const handleLogOut = async () => {
     await logOut();
+    if (router.canDismiss()) router.dismissAll();
     router.replace('/');
   };
 

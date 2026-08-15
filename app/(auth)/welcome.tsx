@@ -17,7 +17,7 @@ export default function WelcomeScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.topBar}>
-        <AnimatedPressable onPress={() => router.replace('/(auth)/log-in')} scaleTo={0.95}>
+        <AnimatedPressable onPress={() => router.push('/(auth)/log-in')} scaleTo={0.95}>
           <Text style={styles.skip}>Skip</Text>
         </AnimatedPressable>
       </View>
