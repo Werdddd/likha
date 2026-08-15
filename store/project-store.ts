@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import { supabase } from '../lib/supabase/client';
 import { projectRowToProject, type ProfileRow, type ProjectRow } from '../lib/supabase/mappers';
-import type { ModerationStatus, Project, Region } from '../types';
+import type { Project, Region } from '../types';
 import { useCreatorStore } from './creator-store';
 
 const PROJECT_SELECT = '*, profiles!projects_creator_id_fkey(*), project_media(*)';
@@ -14,8 +14,6 @@ interface CreateProjectInput {
   mediums: string[];
   region: Region;
   mediaUrls: string[];
-  moderationStatus: 'clean' | 'pending_review';
-  moderationReason?: string;
 }
 
 interface UpdateProjectInput {
@@ -24,8 +22,6 @@ interface UpdateProjectInput {
   categories?: string[];
   mediums?: string[];
   mediaUrls?: string[];
-  moderationStatus?: 'clean' | 'pending_review';
-  moderationReason?: string;
 }
 
 interface ProjectState {
@@ -34,8 +30,18 @@ interface ProjectState {
   fetchFeed: () => Promise<void>;
   fetchByCreator: (creatorId: string) => Promise<Project[]>;
   fetchById: (id: string) => Promise<Project | null>;
-  fetchPendingReview: () => Promise<Project[]>;
-  moderateProject: (id: string, decision: 'approved' | 'rejected') => Promise<{ error: string | null }>;
+  /** Admin-only: every project currently hidden (moderation_status = 'rejected'). */
+  fetchHidden: () => Promise<Project[]>;
+  /** Admin-only: hide or restore any project, with an optional note delivered to the owner. */
+  moderateProject: (
+    id: string,
+    action: 'hide' | 'restore',
+    note?: string,
+  ) => Promise<{ error: string | null }>;
+  /** Admin-only: permanently remove someone else's project, with an optional note. */
+  adminDeleteProject: (id: string, note?: string) => Promise<{ error: string | null }>;
+  /** Delete your own project. */
+  deleteProject: (id: string) => Promise<{ error: string | null }>;
   createProject: (
     creatorId: string,
     input: CreateProjectInput,
@@ -103,11 +109,11 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       return projectRowToProject(row);
     },
 
-    fetchPendingReview: async () => {
+    fetchHidden: async () => {
       const { data, error } = await supabase
         .from('projects')
         .select(PROJECT_SELECT)
-        .eq('moderation_status', 'pending_review')
+        .eq('moderation_status', 'rejected')
         .order('created_at', { ascending: false });
       if (error || !data) return [];
       const rows = data as ProjectRow[];
@@ -115,13 +121,39 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       return rows.map(projectRowToProject);
     },
 
-    moderateProject: async (id, decision) => {
+    moderateProject: async (id, action, note) => {
       const { data, error } = await supabase.rpc('moderate_project', {
         p_project_id: id,
-        p_decision: decision,
+        p_action: action,
+        p_note: note ?? null,
       });
       if (error) return { error: error.message };
       if (data) upsertRows([data as ProjectRow]);
+      return { error: null };
+    },
+
+    adminDeleteProject: async (id, note) => {
+      const { error } = await supabase.rpc('admin_delete_project', {
+        p_project_id: id,
+        p_note: note ?? null,
+      });
+      if (error) return { error: error.message };
+      set((state) => {
+        const next = { ...state.projectsById };
+        delete next[id];
+        return { projectsById: next };
+      });
+      return { error: null };
+    },
+
+    deleteProject: async (id) => {
+      const { error } = await supabase.from('projects').delete().eq('id', id);
+      if (error) return { error: error.message };
+      set((state) => {
+        const next = { ...state.projectsById };
+        delete next[id];
+        return { projectsById: next };
+      });
       return { error: null };
     },
 
@@ -136,8 +168,6 @@ export const useProjectStore = create<ProjectState>((set, get) => {
           mediums: input.mediums,
           region: input.region,
           cover_url: input.mediaUrls[0] ?? null,
-          moderation_status: input.moderationStatus,
-          moderation_reason: input.moderationReason ?? null,
         })
         .select()
         .single();
@@ -168,8 +198,6 @@ export const useProjectStore = create<ProjectState>((set, get) => {
       if (input.description !== undefined) row.description = input.description;
       if (input.categories !== undefined) row.categories = input.categories;
       if (input.mediums !== undefined) row.mediums = input.mediums;
-      if (input.moderationStatus !== undefined) row.moderation_status = input.moderationStatus;
-      if (input.moderationReason !== undefined) row.moderation_reason = input.moderationReason;
 
       if (input.mediaUrls !== undefined) {
         row.cover_url = input.mediaUrls[0] ?? null;

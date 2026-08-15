@@ -197,7 +197,10 @@ export type NotificationKind =
   | 'job_order_cancelled'
   | 'content_flagged'
   | 'content_approved'
-  | 'content_rejected';
+  | 'content_rejected'
+  | 'content_hidden'
+  | 'content_restored'
+  | 'content_removed';
 
 export interface Notification {
   id: string;
@@ -207,6 +210,12 @@ export interface Notification {
   jobPostId?: string;
   jobOrderId?: string;
   listingId?: string;
+  /** Admin's freeform reason, attached when a post is hidden/restored/removed. */
+  note?: string;
+  /** Snapshot of the post's title, taken at the time of a hide/remove action -- needed
+   *  for content_removed since the underlying row (and its title) is gone by the time
+   *  the recipient reads the notification. */
+  contentTitle?: string;
   createdAt: string;
   read: boolean;
 }

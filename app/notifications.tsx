@@ -29,6 +29,9 @@ const VERB: Record<NotificationKind, string> = {
   content_flagged: 'submitted this for review',
   content_approved: 'approved',
   content_rejected: 'rejected',
+  content_hidden: 'hid',
+  content_restored: 'restored',
+  content_removed: 'removed',
 };
 
 const ICON: Record<NotificationKind, keyof typeof Ionicons.glyphMap> = {
@@ -48,6 +51,9 @@ const ICON: Record<NotificationKind, keyof typeof Ionicons.glyphMap> = {
   content_flagged: 'shield-checkmark',
   content_approved: 'checkmark-circle',
   content_rejected: 'close-circle',
+  content_hidden: 'eye-off',
+  content_restored: 'eye',
+  content_removed: 'trash',
 };
 
 function timeAgo(iso: string) {
@@ -113,7 +119,9 @@ function NotificationRow({ notification }: { notification: Notification }) {
   );
   if (!creator) return null;
 
-  const itemTitle = project?.title ?? listing?.title;
+  // content_removed never has a live project/listing to open (the post is gone) -- the
+  // title shown falls back to the snapshot taken at removal time.
+  const itemTitle = project?.title ?? listing?.title ?? notification.contentTitle;
 
   return (
     <AnimatedPressable
@@ -139,6 +147,7 @@ function NotificationRow({ notification }: { notification: Notification }) {
           <Text style={styles.name}>{creator.name}</Text> {VERB[notification.kind]}
           {itemTitle ? ` "${itemTitle}"` : ''}
         </Text>
+        {notification.note && <Text style={styles.note}>“{notification.note}”</Text>}
         <Text style={styles.time}>{timeAgo(notification.createdAt)}</Text>
       </View>
 
@@ -192,6 +201,12 @@ const styles = StyleSheet.create({
   },
   name: {
     fontFamily: t.bodyMedium.fontFamily,
+  },
+  note: {
+    ...t.caption,
+    color: colors.warmBrown,
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   time: {
     ...t.caption,

@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MediaStackCarousel } from '../../components/MediaStackCarousel';
+import { ModerationNoteSheet } from '../../components/ModerationNoteSheet';
 import { AnimatedPressable, Avatar, Button, QuantityStepper } from '../../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { formatPrice } from '../../lib/format';
@@ -22,13 +23,19 @@ export default function ListingDetailScreen() {
   const cachedListing = useListingStore((s) => s.listingsById[id]);
   const fetchListingById = useListingStore((s) => s.fetchById);
   const fetchProjectById = useProjectStore((s) => s.fetchById);
+  const moderateListing = useListingStore((s) => s.moderateListing);
+  const adminDeleteListing = useListingStore((s) => s.adminDeleteListing);
   const creator = useCreatorStore((s) => (cachedListing ? s.getCreator(cachedListing.creatorId) : undefined));
   const addItem = useCartStore((s) => s.addItem);
-  const currentUserId = useSessionStore((s) => s.currentUser.id);
+  const currentUser = useSessionStore((s) => s.currentUser);
+  const currentUserId = currentUser.id;
+  const isAdmin = currentUser.role === 'admin';
 
   const [listing, setListing] = useState<Listing | null | undefined>(cachedListing);
   const [linkedProject, setLinkedProject] = useState<Project | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [noteSheet, setNoteSheet] = useState<'hide' | 'remove' | null>(null);
+  const [isModerating, setIsModerating] = useState(false);
   const insets = useSafeAreaInsets();
 
   const heroOpacity = useSharedValue(0);
@@ -100,6 +107,33 @@ export default function ListingDetailScreen() {
     router.push('/checkout');
   };
 
+  const handleRestore = async () => {
+    setIsModerating(true);
+    const { error } = await moderateListing(id, 'restore');
+    setIsModerating(false);
+    if (error) Alert.alert('Could not restore listing', error);
+  };
+
+  const handleHideConfirm = async (note: string) => {
+    setNoteSheet(null);
+    setIsModerating(true);
+    const { error } = await moderateListing(id, 'hide', note);
+    setIsModerating(false);
+    if (error) Alert.alert('Could not hide listing', error);
+  };
+
+  const handleRemoveConfirm = async (note: string) => {
+    setNoteSheet(null);
+    setIsModerating(true);
+    const { error } = await adminDeleteListing(id, note);
+    setIsModerating(false);
+    if (error) {
+      Alert.alert('Could not remove listing', error);
+      return;
+    }
+    router.back();
+  };
+
   return (
     <SafeAreaView style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -109,27 +143,13 @@ export default function ListingDetailScreen() {
         </Animated.View>
 
         <View style={styles.content}>
-          {isOwner && listing.moderationStatus !== 'clean' && listing.moderationStatus !== 'approved' && (
-            <View
-              style={[
-                styles.inactiveBanner,
-                listing.moderationStatus === 'pending_review' && styles.pendingBanner,
-              ]}
-            >
-              <Ionicons
-                name={listing.moderationStatus === 'rejected' ? 'close-circle-outline' : 'time-outline'}
-                size={14}
-                color={listing.moderationStatus === 'rejected' ? colors.terracotta : colors.warmBrown}
-              />
-              <Text
-                style={[
-                  styles.inactiveBannerLabel,
-                  listing.moderationStatus === 'pending_review' && styles.pendingBannerLabel,
-                ]}
-              >
-                {listing.moderationStatus === 'rejected'
-                  ? 'Rejected — not visible to buyers.'
-                  : 'Pending review — only visible to you until approved.'}
+          {(isOwner || isAdmin) && listing.moderationStatus === 'rejected' && (
+            <View style={styles.inactiveBanner}>
+              <Ionicons name="eye-off-outline" size={14} color={colors.terracotta} />
+              <Text style={styles.inactiveBannerLabel}>
+                {listing.moderationReason
+                  ? `Hidden by an admin: ${listing.moderationReason}`
+                  : 'Hidden by an admin — not visible to buyers.'}
               </Text>
             </View>
           )}
@@ -138,6 +158,41 @@ export default function ListingDetailScreen() {
             <View style={styles.inactiveBanner}>
               <Ionicons name="eye-off-outline" size={14} color={colors.terracotta} />
               <Text style={styles.inactiveBannerLabel}>Deactivated — only you can see this listing.</Text>
+            </View>
+          )}
+
+          {isAdmin && (
+            <View style={styles.adminRow}>
+              {listing.moderationStatus === 'rejected' ? (
+                <AnimatedPressable
+                  style={styles.adminButton}
+                  scaleTo={0.96}
+                  disabled={isModerating}
+                  onPress={handleRestore}
+                >
+                  <Ionicons name="eye-outline" size={14} color={colors.ink} />
+                  <Text style={styles.adminButtonLabel}>{isModerating ? 'Working…' : 'Restore'}</Text>
+                </AnimatedPressable>
+              ) : (
+                <AnimatedPressable
+                  style={styles.adminButton}
+                  scaleTo={0.96}
+                  disabled={isModerating}
+                  onPress={() => setNoteSheet('hide')}
+                >
+                  <Ionicons name="eye-off-outline" size={14} color={colors.ink} />
+                  <Text style={styles.adminButtonLabel}>Hide</Text>
+                </AnimatedPressable>
+              )}
+              <AnimatedPressable
+                style={[styles.adminButton, styles.adminButtonDestructive]}
+                scaleTo={0.96}
+                disabled={isModerating}
+                onPress={() => setNoteSheet('remove')}
+              >
+                <Ionicons name="trash-outline" size={14} color={colors.terracotta} />
+                <Text style={[styles.adminButtonLabel, styles.adminButtonLabelDestructive]}>Remove</Text>
+              </AnimatedPressable>
             </View>
           )}
 
@@ -246,6 +301,23 @@ export default function ListingDetailScreen() {
       >
         <Ionicons name="chevron-back" size={20} color={colors.ink} />
       </AnimatedPressable>
+
+      <ModerationNoteSheet
+        visible={noteSheet === 'hide'}
+        title="Hide this listing"
+        body="The creator will be notified with your reason. They can still see it themselves; nobody else can."
+        confirmLabel="Hide"
+        onCancel={() => setNoteSheet(null)}
+        onConfirm={handleHideConfirm}
+      />
+      <ModerationNoteSheet
+        visible={noteSheet === 'remove'}
+        title="Remove this listing"
+        body="This permanently deletes it. The creator will be notified with your reason."
+        confirmLabel="Remove"
+        onCancel={() => setNoteSheet(null)}
+        onConfirm={handleRemoveConfirm}
+      />
     </SafeAreaView>
   );
 }
@@ -270,17 +342,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     marginBottom: spacing.sm,
-    alignSelf: 'flex-start',
   },
   inactiveBannerLabel: {
     ...t.caption,
     color: colors.terracotta,
+    flex: 1,
   },
-  pendingBanner: {
-    backgroundColor: colors.likhaYellow + '33',
+  adminRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  pendingBannerLabel: {
-    color: colors.warmBrown,
+  adminButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.softGray + '80',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 6,
+  },
+  adminButtonDestructive: {
+    backgroundColor: colors.terracotta + '1a',
+  },
+  adminButtonLabel: {
+    ...t.caption,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.ink,
+  },
+  adminButtonLabelDestructive: {
+    color: colors.terracotta,
   },
   titleRow: {
     flexDirection: 'row',

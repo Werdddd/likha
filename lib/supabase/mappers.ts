@@ -392,6 +392,8 @@ export interface NotificationRow {
   job_post_id: string | null;
   job_order_id: string | null;
   listing_id: string | null;
+  note: string | null;
+  content_title: string | null;
   read: boolean;
   created_at: string;
 }
@@ -405,6 +407,8 @@ export function notificationRowToNotification(row: NotificationRow): Notificatio
     jobPostId: row.job_post_id ?? undefined,
     jobOrderId: row.job_order_id ?? undefined,
     listingId: row.listing_id ?? undefined,
+    note: row.note ?? undefined,
+    contentTitle: row.content_title ?? undefined,
     createdAt: row.created_at,
     read: row.read,
   };

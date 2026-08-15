@@ -592,11 +592,9 @@ function ListingsTab({
               </Text>
               <ProductTypeTag productType={listing.productType} />
             </View>
-            {listing.moderationStatus === 'pending_review' || listing.moderationStatus === 'rejected' ? (
+            {listing.moderationStatus === 'rejected' ? (
               <View style={[styles.statusPill, styles.statusPillModeration]}>
-                <Text style={[styles.statusPillLabel, styles.statusPillLabelModeration]}>
-                  {listing.moderationStatus === 'rejected' ? 'Rejected' : 'Pending review'}
-                </Text>
+                <Text style={[styles.statusPillLabel, styles.statusPillLabelModeration]}>Hidden</Text>
               </View>
             ) : (
               <AnimatedPressable

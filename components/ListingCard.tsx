@@ -56,14 +56,11 @@ export function ListingCard({ listing, creator, onPress }: ListingCardProps) {
         <Text style={styles.priceLabel}>{formatPrice(listing.price)}</Text>
       </View>
 
-      {/* Only ever populated for rows the viewer is allowed to see un-approved (their
-          own, or an admin) -- RLS never returns pending/rejected rows to anyone else. */}
-      {(listing.moderationStatus === 'pending_review' || listing.moderationStatus === 'rejected') && (
+      {/* Only ever populated for rows the viewer is allowed to see hidden (their own, or
+          an admin) -- RLS never returns hidden rows to anyone else. */}
+      {listing.moderationStatus === 'rejected' && (
         <View style={styles.moderationBadgeWrap}>
-          <Badge
-            label={listing.moderationStatus === 'rejected' ? 'Rejected' : 'Pending review'}
-            tone="muted"
-          />
+          <Badge label="Hidden" tone="muted" />
         </View>
       )}
     </AnimatedPressable>

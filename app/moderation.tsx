@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '../components/ui';
+import { ModerationNoteSheet } from '../components/ModerationNoteSheet';
+import { AnimatedPressable, Button } from '../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { useCreatorStore } from '../store/creator-store';
 import { useListingStore } from '../store/listing-store';
@@ -13,7 +14,7 @@ import { useProjectStore } from '../store/project-store';
 import { useSessionStore } from '../store/session-store';
 import type { Listing, Project } from '../types';
 
-type PendingItem =
+type HiddenItem =
   | { kind: 'project'; id: string; createdAt: string; project: Project }
   | { kind: 'listing'; id: string; createdAt: string; listing: Listing };
 
@@ -21,23 +22,26 @@ export default function ModerationScreen() {
   const currentUser = useSessionStore((s) => s.currentUser);
   const isAdmin = currentUser.role === 'admin';
 
-  const fetchPendingReview = useProjectStore((s) => s.fetchPendingReview);
+  const fetchHidden = useProjectStore((s) => s.fetchHidden);
   const moderateProject = useProjectStore((s) => s.moderateProject);
-  const fetchPendingListings = useListingStore((s) => s.fetchPendingListings);
+  const adminDeleteProject = useProjectStore((s) => s.adminDeleteProject);
+  const fetchHiddenListings = useListingStore((s) => s.fetchHiddenListings);
   const moderateListing = useListingStore((s) => s.moderateListing);
+  const adminDeleteListing = useListingStore((s) => s.adminDeleteListing);
   const getCreator = useCreatorStore((s) => s.getCreator);
 
-  const [pendingProjects, setPendingProjects] = useState<Project[]>([]);
-  const [pendingListings, setPendingListings] = useState<Listing[]>([]);
+  const [hiddenProjects, setHiddenProjects] = useState<Project[]>([]);
+  const [hiddenListings, setHiddenListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [workingId, setWorkingId] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<HiddenItem | null>(null);
 
   const load = useCallback(async () => {
-    const [projects, listings] = await Promise.all([fetchPendingReview(), fetchPendingListings()]);
-    setPendingProjects(projects);
-    setPendingListings(listings);
-  }, [fetchPendingReview, fetchPendingListings]);
+    const [projects, listings] = await Promise.all([fetchHidden(), fetchHiddenListings()]);
+    setHiddenProjects(projects);
+    setHiddenListings(listings);
+  }, [fetchHidden, fetchHiddenListings]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -51,46 +55,59 @@ export default function ModerationScreen() {
     setRefreshing(false);
   }, [load]);
 
-  const items: PendingItem[] = useMemo(() => {
-    const projectItems: PendingItem[] = pendingProjects.map((project) => ({
+  const items: HiddenItem[] = useMemo(() => {
+    const projectItems: HiddenItem[] = hiddenProjects.map((project) => ({
       kind: 'project',
       id: project.id,
       createdAt: project.createdAt,
       project,
     }));
-    const listingItems: PendingItem[] = pendingListings.map((listing) => ({
+    const listingItems: HiddenItem[] = hiddenListings.map((listing) => ({
       kind: 'listing',
       id: listing.id,
       createdAt: listing.createdAt,
       listing,
     }));
     return [...projectItems, ...listingItems].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [pendingProjects, pendingListings]);
+  }, [hiddenProjects, hiddenListings]);
 
-  const handleDecision = async (item: PendingItem, decision: 'approved' | 'rejected') => {
-    setDecidingId(item.id);
+  const handleRestore = async (item: HiddenItem) => {
+    setWorkingId(item.id);
     const { error } =
-      item.kind === 'project' ? await moderateProject(item.id, decision) : await moderateListing(item.id, decision);
-    setDecidingId(null);
+      item.kind === 'project' ? await moderateProject(item.id, 'restore') : await moderateListing(item.id, 'restore');
+    setWorkingId(null);
     if (error) {
-      Alert.alert('Could not update', error);
+      Alert.alert('Could not restore', error);
       return;
     }
-    if (item.kind === 'project') {
-      setPendingProjects((prev) => prev.filter((p) => p.id !== item.id));
-    } else {
-      setPendingListings((prev) => prev.filter((l) => l.id !== item.id));
+    if (item.kind === 'project') setHiddenProjects((prev) => prev.filter((p) => p.id !== item.id));
+    else setHiddenListings((prev) => prev.filter((l) => l.id !== item.id));
+  };
+
+  const handleRemoveConfirm = async (note: string) => {
+    if (!removeTarget) return;
+    const target = removeTarget;
+    setRemoveTarget(null);
+    setWorkingId(target.id);
+    const { error } =
+      target.kind === 'project' ? await adminDeleteProject(target.id, note) : await adminDeleteListing(target.id, note);
+    setWorkingId(null);
+    if (error) {
+      Alert.alert('Could not remove', error);
+      return;
     }
+    if (target.kind === 'project') setHiddenProjects((prev) => prev.filter((p) => p.id !== target.id));
+    else setHiddenListings((prev) => prev.filter((l) => l.id !== target.id));
   };
 
   if (!isAdmin) {
     return (
       <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
-        <Stack.Screen options={{ title: 'Moderation Queue' }} />
+        <Stack.Screen options={{ title: 'Hidden Posts' }} />
         <View style={styles.empty}>
           <Ionicons name="lock-closed-outline" size={40} color={colors.softGray} />
           <Text style={styles.emptyTitle}>Not authorized</Text>
-          <Text style={styles.emptyBody}>Only admins can access the moderation queue.</Text>
+          <Text style={styles.emptyBody}>Only admins can access this screen.</Text>
         </View>
       </SafeAreaView>
     );
@@ -98,7 +115,7 @@ export default function ModerationScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
-      <Stack.Screen options={{ title: 'Moderation Queue' }} />
+      <Stack.Screen options={{ title: 'Hidden Posts' }} />
 
       {isLoading && items.length === 0 ? (
         <View style={styles.loading}>
@@ -110,8 +127,10 @@ export default function ModerationScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
         >
           <Ionicons name="shield-checkmark-outline" size={40} color={colors.softGray} />
-          <Text style={styles.emptyTitle}>Nothing pending</Text>
-          <Text style={styles.emptyBody}>Flagged projects and listings will show up here for review.</Text>
+          <Text style={styles.emptyTitle}>Nothing hidden</Text>
+          <Text style={styles.emptyBody}>
+            Projects and listings you hide will show up here so you can restore or permanently remove them.
+          </Text>
         </ScrollView>
       ) : (
         <ScrollView
@@ -124,11 +143,16 @@ export default function ModerationScreen() {
             const creatorId = item.kind === 'project' ? item.project.creatorId : item.listing.creatorId;
             const reason = item.kind === 'project' ? item.project.moderationReason : item.listing.moderationReason;
             const creator = getCreator(creatorId);
-            const isDeciding = decidingId === item.id;
+            const isWorking = workingId === item.id;
+            const detailHref = item.kind === 'project' ? `/project/${item.id}` : `/listing/${item.id}`;
 
             return (
               <View key={`${item.kind}-${item.id}`} style={styles.card}>
-                <View style={styles.cardTop}>
+                <AnimatedPressable
+                  style={styles.cardTop}
+                  scaleTo={0.98}
+                  onPress={() => router.push(detailHref as never)}
+                >
                   <Image source={{ uri: coverUrl }} style={styles.thumb} contentFit="cover" />
                   <View style={styles.cardInfo}>
                     <View style={styles.typeTag}>
@@ -141,28 +165,28 @@ export default function ModerationScreen() {
                       {creator ? `@${creator.handle}` : 'Unknown creator'}
                     </Text>
                   </View>
-                </View>
+                </AnimatedPressable>
 
                 {reason && (
                   <View style={styles.reasonBox}>
-                    <Ionicons name="alert-circle-outline" size={14} color={colors.warmBrown} />
+                    <Ionicons name="chatbox-ellipses-outline" size={14} color={colors.warmBrown} />
                     <Text style={styles.reasonText}>{reason}</Text>
                   </View>
                 )}
 
                 <View style={styles.actionRow}>
                   <Button
-                    label="Reject"
-                    variant="ghost"
-                    disabled={isDeciding}
-                    onPress={() => handleDecision(item, 'rejected')}
+                    label="Restore"
+                    variant="secondary"
+                    disabled={isWorking}
+                    onPress={() => handleRestore(item)}
                     style={styles.actionButton}
                   />
                   <Button
-                    label={isDeciding ? 'Working…' : 'Approve'}
-                    variant="secondary"
-                    disabled={isDeciding}
-                    onPress={() => handleDecision(item, 'approved')}
+                    label="Remove"
+                    variant="ghost"
+                    disabled={isWorking}
+                    onPress={() => setRemoveTarget(item)}
                     style={styles.actionButton}
                   />
                 </View>
@@ -171,6 +195,15 @@ export default function ModerationScreen() {
           })}
         </ScrollView>
       )}
+
+      <ModerationNoteSheet
+        visible={removeTarget !== null}
+        title="Remove permanently"
+        body="This permanently deletes it. The creator will be notified with your reason."
+        confirmLabel="Remove"
+        onCancel={() => setRemoveTarget(null)}
+        onConfirm={handleRemoveConfirm}
+      />
     </SafeAreaView>
   );
 }
@@ -253,7 +286,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.xs,
-    backgroundColor: colors.likhaYellow + '33',
+    backgroundColor: colors.terracotta + '1a',
     borderRadius: radius.md,
     padding: spacing.sm,
     marginTop: spacing.sm,

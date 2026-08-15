@@ -28,7 +28,7 @@ export default function SettingsScreen() {
     { icon: 'receipt-outline', label: 'My Orders', onPress: () => router.push('/orders') },
     { icon: 'notifications-outline', label: 'Notifications', onPress: () => router.push('/notifications') },
     ...(currentUser.role === 'admin'
-      ? [{ icon: 'shield-checkmark-outline' as const, label: 'Moderation Queue', onPress: () => router.push('/moderation') }]
+      ? [{ icon: 'shield-checkmark-outline' as const, label: 'Hidden Posts', onPress: () => router.push('/moderation') }]
       : []),
   ];
 

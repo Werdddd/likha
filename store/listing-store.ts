@@ -19,8 +19,6 @@ interface CreateListingInput {
   imageUrls: string[];
   digitalFilePath?: string;
   digitalFileName?: string;
-  moderationStatus: 'clean' | 'pending_review';
-  moderationReason?: string;
 }
 
 interface UpdateListingInput {
@@ -34,8 +32,6 @@ interface UpdateListingInput {
   imageUrls: string[];
   digitalFilePath?: string;
   digitalFileName?: string;
-  moderationStatus?: 'clean' | 'pending_review';
-  moderationReason?: string;
 }
 
 interface ListingState {
@@ -45,8 +41,16 @@ interface ListingState {
   fetchByCreator: (creatorId: string) => Promise<Listing[]>;
   fetchMyListings: (creatorId: string) => Promise<Listing[]>;
   fetchById: (id: string) => Promise<Listing | null>;
-  fetchPendingListings: () => Promise<Listing[]>;
-  moderateListing: (id: string, decision: 'approved' | 'rejected') => Promise<{ error: string | null }>;
+  /** Admin-only: every listing currently hidden (moderation_status = 'rejected'). */
+  fetchHiddenListings: () => Promise<Listing[]>;
+  /** Admin-only: hide or restore any listing, with an optional note delivered to the owner. */
+  moderateListing: (
+    id: string,
+    action: 'hide' | 'restore',
+    note?: string,
+  ) => Promise<{ error: string | null }>;
+  /** Admin-only: permanently remove someone else's listing, with an optional note. */
+  adminDeleteListing: (id: string, note?: string) => Promise<{ error: string | null }>;
   createListing: (
     creatorId: string,
     input: CreateListingInput,
@@ -56,6 +60,7 @@ interface ListingState {
     input: UpdateListingInput,
   ) => Promise<{ listing: Listing | null; error: string | null }>;
   setListingActive: (listingId: string, isActive: boolean) => Promise<{ error: string | null }>;
+  /** Delete your own listing. */
   deleteListing: (listingId: string) => Promise<{ error: string | null }>;
 }
 
@@ -129,11 +134,11 @@ export const useListingStore = create<ListingState>((set, get) => {
       return listingRowToListing(row);
     },
 
-    fetchPendingListings: async () => {
+    fetchHiddenListings: async () => {
       const { data, error } = await supabase
         .from('listings')
         .select(LISTING_SELECT)
-        .eq('moderation_status', 'pending_review')
+        .eq('moderation_status', 'rejected')
         .order('created_at', { ascending: false });
       if (error || !data) return [];
       const rows = data as ListingRow[];
@@ -141,13 +146,28 @@ export const useListingStore = create<ListingState>((set, get) => {
       return rows.map(listingRowToListing);
     },
 
-    moderateListing: async (id, decision) => {
+    moderateListing: async (id, action, note) => {
       const { data, error } = await supabase.rpc('moderate_listing', {
         p_listing_id: id,
-        p_decision: decision,
+        p_action: action,
+        p_note: note ?? null,
       });
       if (error) return { error: error.message };
       if (data) upsertRows([data as ListingRow]);
+      return { error: null };
+    },
+
+    adminDeleteListing: async (id, note) => {
+      const { error } = await supabase.rpc('admin_delete_listing', {
+        p_listing_id: id,
+        p_note: note ?? null,
+      });
+      if (error) return { error: error.message };
+      set((state) => {
+        const next = { ...state.listingsById };
+        delete next[id];
+        return { listingsById: next };
+      });
       return { error: null };
     },
 
@@ -167,8 +187,6 @@ export const useListingStore = create<ListingState>((set, get) => {
           digital_file_path: input.digitalFilePath ?? null,
           digital_file_name: input.digitalFileName ?? null,
           cover_url: input.imageUrls[0] ?? null,
-          moderation_status: input.moderationStatus,
-          moderation_reason: input.moderationReason ?? null,
         })
         .select()
         .single();
@@ -206,8 +224,6 @@ export const useListingStore = create<ListingState>((set, get) => {
         digital_file_name: input.digitalFileName ?? null,
         cover_url: input.imageUrls[0] ?? null,
       };
-      if (input.moderationStatus !== undefined) row.moderation_status = input.moderationStatus;
-      if (input.moderationReason !== undefined) row.moderation_reason = input.moderationReason;
 
       const { error: listingError } = await supabase.from('listings').update(row).eq('id', listingId);
       if (listingError) return { listing: null, error: listingError.message };

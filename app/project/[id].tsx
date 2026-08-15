@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -13,6 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { CommentsSheet } from '../../components/CommentsSheet';
 import { MediaStackCarousel } from '../../components/MediaStackCarousel';
+import { ModerationNoteSheet } from '../../components/ModerationNoteSheet';
 import { AnimatedPressable, Avatar } from '../../components/ui';
 import { iconForCategory } from '../../constants/category-icons';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
@@ -24,18 +25,24 @@ import type { Project } from '../../types';
 
 export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const currentUserId = useSessionStore((s) => s.currentUser.id);
+  const currentUser = useSessionStore((s) => s.currentUser);
+  const currentUserId = currentUser.id;
+  const isAdmin = currentUser.role === 'admin';
 
   const cachedProject = useProjectStore((s) => s.projectsById[id]);
   const fetchById = useProjectStore((s) => s.fetchById);
   const appreciate = useProjectStore((s) => s.appreciate);
   const unappreciate = useProjectStore((s) => s.unappreciate);
   const hasAppreciated = useProjectStore((s) => s.hasAppreciated);
+  const moderateProject = useProjectStore((s) => s.moderateProject);
+  const adminDeleteProject = useProjectStore((s) => s.adminDeleteProject);
   const creator = useCreatorStore((s) => (cachedProject ? s.getCreator(cachedProject.creatorId) : undefined));
 
   const [project, setProject] = useState<Project | null | undefined>(cachedProject);
   const [appreciated, setAppreciated] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [noteSheet, setNoteSheet] = useState<'hide' | 'remove' | null>(null);
+  const [isModerating, setIsModerating] = useState(false);
   const insets = useSafeAreaInsets();
 
   const heroOpacity = useSharedValue(0);
@@ -81,6 +88,33 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  const handleRestore = async () => {
+    setIsModerating(true);
+    const { error } = await moderateProject(id, 'restore');
+    setIsModerating(false);
+    if (error) Alert.alert('Could not restore project', error);
+  };
+
+  const handleHideConfirm = async (note: string) => {
+    setNoteSheet(null);
+    setIsModerating(true);
+    const { error } = await moderateProject(id, 'hide', note);
+    setIsModerating(false);
+    if (error) Alert.alert('Could not hide project', error);
+  };
+
+  const handleRemoveConfirm = async (note: string) => {
+    setNoteSheet(null);
+    setIsModerating(true);
+    const { error } = await adminDeleteProject(id, note);
+    setIsModerating(false);
+    if (error) {
+      Alert.alert('Could not remove project', error);
+      return;
+    }
+    router.back();
+  };
+
   if (project === undefined) {
     return (
       <SafeAreaView style={styles.screen}>
@@ -108,23 +142,49 @@ export default function ProjectDetailScreen() {
         </Animated.View>
 
         <View style={styles.content}>
-          {currentUserId === project.creatorId && project.moderationStatus !== 'clean' && project.moderationStatus !== 'approved' && (
-            <View style={[styles.moderationBanner, project.moderationStatus === 'rejected' && styles.moderationBannerRejected]}>
-              <Ionicons
-                name={project.moderationStatus === 'rejected' ? 'close-circle-outline' : 'time-outline'}
-                size={16}
-                color={project.moderationStatus === 'rejected' ? colors.terracotta : colors.warmBrown}
-              />
-              <Text
-                style={[
-                  styles.moderationBannerText,
-                  project.moderationStatus === 'rejected' && styles.moderationBannerTextRejected,
-                ]}
-              >
-                {project.moderationStatus === 'rejected'
-                  ? 'Rejected — not visible to others.'
-                  : 'Pending review — only visible to you until approved.'}
+          {(currentUserId === project.creatorId || isAdmin) && project.moderationStatus === 'rejected' && (
+            <View style={styles.moderationBanner}>
+              <Ionicons name="eye-off-outline" size={16} color={colors.terracotta} />
+              <Text style={styles.moderationBannerText}>
+                {project.moderationReason
+                  ? `Hidden by an admin: ${project.moderationReason}`
+                  : 'Hidden by an admin — not visible to others.'}
               </Text>
+            </View>
+          )}
+
+          {isAdmin && (
+            <View style={styles.adminRow}>
+              {project.moderationStatus === 'rejected' ? (
+                <AnimatedPressable
+                  style={styles.adminButton}
+                  scaleTo={0.96}
+                  disabled={isModerating}
+                  onPress={handleRestore}
+                >
+                  <Ionicons name="eye-outline" size={14} color={colors.ink} />
+                  <Text style={styles.adminButtonLabel}>{isModerating ? 'Working…' : 'Restore'}</Text>
+                </AnimatedPressable>
+              ) : (
+                <AnimatedPressable
+                  style={styles.adminButton}
+                  scaleTo={0.96}
+                  disabled={isModerating}
+                  onPress={() => setNoteSheet('hide')}
+                >
+                  <Ionicons name="eye-off-outline" size={14} color={colors.ink} />
+                  <Text style={styles.adminButtonLabel}>Hide</Text>
+                </AnimatedPressable>
+              )}
+              <AnimatedPressable
+                style={[styles.adminButton, styles.adminButtonDestructive]}
+                scaleTo={0.96}
+                disabled={isModerating}
+                onPress={() => setNoteSheet('remove')}
+              >
+                <Ionicons name="trash-outline" size={14} color={colors.terracotta} />
+                <Text style={[styles.adminButtonLabel, styles.adminButtonLabelDestructive]}>Remove</Text>
+              </AnimatedPressable>
             </View>
           )}
 
@@ -223,6 +283,23 @@ export default function ProjectDetailScreen() {
         onClose={() => setCommentsVisible(false)}
         projectId={project.id}
       />
+
+      <ModerationNoteSheet
+        visible={noteSheet === 'hide'}
+        title="Hide this project"
+        body="The creator will be notified with your reason. They can still see it themselves; nobody else can."
+        confirmLabel="Hide"
+        onCancel={() => setNoteSheet(null)}
+        onConfirm={handleHideConfirm}
+      />
+      <ModerationNoteSheet
+        visible={noteSheet === 'remove'}
+        title="Remove this project"
+        body="This permanently deletes it. The creator will be notified with your reason."
+        confirmLabel="Remove"
+        onCancel={() => setNoteSheet(null)}
+        onConfirm={handleRemoveConfirm}
+      />
     </SafeAreaView>
   );
 }
@@ -242,21 +319,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.likhaYellow + '33',
+    backgroundColor: colors.terracotta + '1a',
     borderRadius: radius.md,
     padding: spacing.sm,
     marginBottom: spacing.md,
   },
-  moderationBannerRejected: {
-    backgroundColor: colors.terracotta + '1a',
-  },
   moderationBannerText: {
     ...t.caption,
     fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: colors.warmBrown,
+    color: colors.terracotta,
     flex: 1,
   },
-  moderationBannerTextRejected: {
+  adminRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  adminButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.softGray + '80',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 6,
+  },
+  adminButtonDestructive: {
+    backgroundColor: colors.terracotta + '1a',
+  },
+  adminButtonLabel: {
+    ...t.caption,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.ink,
+  },
+  adminButtonLabelDestructive: {
     color: colors.terracotta,
   },
   title: {

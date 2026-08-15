@@ -45,21 +45,12 @@ export default function EditListingScreen() {
       imageUrls: values.images,
       digitalFilePath: values.digitalFilePath,
       digitalFileName: values.digitalFileName,
-      // Only ever escalate into review -- never sent when clean, so an edit that
-      // doesn't touch images can't accidentally clear an existing pending/rejected
-      // status back to clean.
-      moderationStatus: values.hasFlaggedMedia ? 'pending_review' : undefined,
-      moderationReason: values.hasFlaggedMedia ? values.moderationReason : undefined,
     });
     setIsSubmitting(false);
 
     if (!updated) {
       Alert.alert('Could not save changes', error ?? 'Please try again.');
       return;
-    }
-
-    if (values.hasFlaggedMedia) {
-      Alert.alert('Submitted for review', "This won't be visible to buyers until an admin reviews it.");
     }
     router.back();
   };
