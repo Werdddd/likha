@@ -9,6 +9,7 @@ import { colors } from '../../constants/theme';
 
 const HOLD_MS = 3500;
 const EXIT_DURATION = 450;
+const LOGO_Y_OFFSET = -20; // negative moves logo up, positive moves it down
 
 export default function SplashScreen() {
   const opacity = useSharedValue(0);
@@ -77,7 +78,7 @@ const styles = StyleSheet.create({
   },
   tint: {
     backgroundColor: colors.likhaYellow,
-    opacity: 0.88,
+    opacity: 0.5,
   },
   safe: {
     flex: 1,
@@ -88,8 +89,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: '80%',
-    maxWidth: 380,
-    height: 160,
+    width: '100%',
+    maxWidth: 600,
+    height: 300,
+    transform: [{ translateY: LOGO_Y_OFFSET }],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
   },
 });
