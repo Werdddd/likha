@@ -12,7 +12,7 @@ const EMPTY_USER: Creator = {
   avatarUrl: '',
   coverUrl: '',
   bio: '',
-  region: 'Manila',
+  region: 'NCR',
   categories: [],
   profileMode: 'portfolio',
   tags: [],

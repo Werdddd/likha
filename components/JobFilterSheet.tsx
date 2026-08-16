@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
@@ -55,37 +55,39 @@ export function JobFilterSheet({
             </AnimatedPressable>
           </View>
 
-          <Text style={styles.groupLabel}>Region</Text>
-          <View style={styles.chipWrap}>
-            <Chip label="All" selected={region === null} onPress={() => onSelectRegion(null)} />
-            {regions.map((option) => (
-              <Chip
-                key={option}
-                label={option}
-                selected={region === option}
-                onPress={() => onSelectRegion(region === option ? null : option)}
-              />
-            ))}
-          </View>
+          <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+            <Text style={styles.groupLabel}>Region</Text>
+            <View style={styles.chipWrap}>
+              <Chip label="All" selected={region === null} onPress={() => onSelectRegion(null)} />
+              {regions.map((option) => (
+                <Chip
+                  key={option}
+                  label={option}
+                  selected={region === option}
+                  onPress={() => onSelectRegion(region === option ? null : option)}
+                />
+              ))}
+            </View>
 
-          <Text style={styles.groupLabel}>Max budget (₱)</Text>
-          <TextField
-            label=""
-            placeholder="Any"
-            keyboardType="numeric"
-            value={maxBudget}
-            onChangeText={onChangeMaxBudget}
-            containerStyle={styles.field}
-          />
+            <Text style={styles.groupLabel}>Max budget (₱)</Text>
+            <TextField
+              label=""
+              placeholder="Any"
+              keyboardType="numeric"
+              value={maxBudget}
+              onChangeText={onChangeMaxBudget}
+              containerStyle={styles.field}
+            />
 
-          <Text style={styles.groupLabel}>Deadline before</Text>
-          <TextField
-            label=""
-            placeholder="YYYY-MM-DD"
-            value={deadlineBefore}
-            onChangeText={onChangeDeadlineBefore}
-            containerStyle={styles.field}
-          />
+            <Text style={styles.groupLabel}>Deadline before</Text>
+            <TextField
+              label=""
+              placeholder="YYYY-MM-DD"
+              value={deadlineBefore}
+              onChangeText={onChangeDeadlineBefore}
+              containerStyle={styles.field}
+            />
+          </ScrollView>
 
           <View style={styles.footer}>
             <AnimatedPressable onPress={clearAll} disabled={!hasFilters} scaleTo={0.96} hitSlop={8}>
@@ -115,7 +117,11 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.lg,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
+    maxHeight: '85%',
     ...shadow.lg,
+  },
+  scroll: {
+    flexGrow: 0,
   },
   handle: {
     width: 40,

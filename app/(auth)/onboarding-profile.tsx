@@ -12,7 +12,7 @@ import type { Category, Region } from '../../types';
 export default function OnboardingProfileScreen() {
   const completeOnboarding = useSessionStore((s) => s.completeOnboarding);
   const [bio, setBio] = useState('');
-  const [region, setRegion] = useState<Region>('Manila');
+  const [region, setRegion] = useState<Region>('NCR');
   const [selectedCategories, setSelectedCategories] = useState<Category[]>(['Illustration']);
   const [isSubmitting, setIsSubmitting] = useState(false);
 

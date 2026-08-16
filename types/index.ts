@@ -10,12 +10,23 @@ export type Category =
   | 'Crafts';
 
 export type Region =
-  | 'Manila'
-  | 'Cebu'
-  | 'Davao'
-  | 'Iloilo'
-  | 'Baguio'
-  | 'Bacolod';
+  | 'NCR'
+  | 'CAR'
+  | 'Ilocos Region'
+  | 'Cagayan Valley'
+  | 'Central Luzon'
+  | 'CALABARZON'
+  | 'MIMAROPA'
+  | 'Bicol Region'
+  | 'Western Visayas'
+  | 'Central Visayas'
+  | 'Eastern Visayas'
+  | 'Zamboanga Peninsula'
+  | 'Northern Mindanao'
+  | 'Davao Region'
+  | 'SOCCSKSARGEN'
+  | 'Caraga'
+  | 'BARMM';
 
 export type ProductType = 'digital' | 'physical';
 

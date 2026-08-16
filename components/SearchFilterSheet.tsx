@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
@@ -51,31 +51,33 @@ export function SearchFilterSheet({
             </AnimatedPressable>
           </View>
 
-          <Text style={styles.groupLabel}>Category</Text>
-          <View style={styles.chipWrap}>
-            <Chip label="All" selected={category === null} onPress={() => onSelectCategory(null)} />
-            {categories.map((option) => (
-              <Chip
-                key={option}
-                label={option}
-                selected={category === option}
-                onPress={() => onSelectCategory(category === option ? null : option)}
-              />
-            ))}
-          </View>
+          <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+            <Text style={styles.groupLabel}>Category</Text>
+            <View style={styles.chipWrap}>
+              <Chip label="All" selected={category === null} onPress={() => onSelectCategory(null)} />
+              {categories.map((option) => (
+                <Chip
+                  key={option}
+                  label={option}
+                  selected={category === option}
+                  onPress={() => onSelectCategory(category === option ? null : option)}
+                />
+              ))}
+            </View>
 
-          <Text style={styles.groupLabel}>Region</Text>
-          <View style={styles.chipWrap}>
-            <Chip label="All" selected={region === null} onPress={() => onSelectRegion(null)} />
-            {regions.map((option) => (
-              <Chip
-                key={option}
-                label={option}
-                selected={region === option}
-                onPress={() => onSelectRegion(region === option ? null : option)}
-              />
-            ))}
-          </View>
+            <Text style={styles.groupLabel}>Region</Text>
+            <View style={styles.chipWrap}>
+              <Chip label="All" selected={region === null} onPress={() => onSelectRegion(null)} />
+              {regions.map((option) => (
+                <Chip
+                  key={option}
+                  label={option}
+                  selected={region === option}
+                  onPress={() => onSelectRegion(region === option ? null : option)}
+                />
+              ))}
+            </View>
+          </ScrollView>
 
           <View style={styles.footer}>
             <AnimatedPressable onPress={clearAll} disabled={!hasFilters} scaleTo={0.96} hitSlop={8}>
@@ -105,7 +107,11 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.lg,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
+    maxHeight: '85%',
     ...shadow.lg,
+  },
+  scroll: {
+    flexGrow: 0,
   },
   handle: {
     width: 40,

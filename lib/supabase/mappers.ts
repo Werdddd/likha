@@ -62,7 +62,7 @@ export function profileRowToCreator(row: ProfileRow): Creator {
     avatarUrl: row.avatar_url ?? '',
     coverUrl: row.cover_url ?? '',
     bio: row.bio,
-    region: (row.region as Region) ?? 'Manila',
+    region: (row.region as Region) ?? 'NCR',
     categories: row.categories as Category[],
     profileMode: row.profile_mode as ProfileMode,
     tags: row.tags,
