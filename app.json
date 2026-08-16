@@ -18,7 +18,10 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,7 +35,20 @@
         {
           "photosPermission": "Likha uses your photo library so you can upload an avatar, cover photo, and project or listing images."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#F4C542"
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7a1d2429-4c01-4476-a8b1-f587b04236a7"
+      }
+    },
+    "owner": "werddd"
   }
 }

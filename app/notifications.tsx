@@ -33,6 +33,14 @@ const VERB: Record<NotificationKind, string> = {
   content_restored: 'restored',
   content_removed: 'removed',
   review: 'left a review on your listing',
+  order_placed: 'placed an order from your shop',
+  order_shipped: 'shipped your order',
+  order_delivered: 'marked your order as delivered',
+  order_rejected: 'rejected your order',
+  order_cancelled: 'cancelled their order',
+  payment_verified: 'verified your payment',
+  message: 'sent you a message',
+  job_post_comment: 'commented on your job post',
 };
 
 const ICON: Record<NotificationKind, keyof typeof Ionicons.glyphMap> = {
@@ -56,7 +64,20 @@ const ICON: Record<NotificationKind, keyof typeof Ionicons.glyphMap> = {
   content_restored: 'eye',
   content_removed: 'trash',
   review: 'star',
+  order_placed: 'bag-check',
+  order_shipped: 'cube',
+  order_delivered: 'checkmark-circle',
+  order_rejected: 'close-circle',
+  order_cancelled: 'ban',
+  payment_verified: 'card',
+  message: 'chatbubble-ellipses',
+  job_post_comment: 'chatbubble',
 };
+
+// order_placed/order_cancelled land on the seller (via /creator-order); the buyer-facing
+// statuses and payment_verified land on the buyer (via /order) -- role is implied by kind,
+// since each of these notification kinds only ever has one possible recipient role.
+const SELLER_FACING_ORDER_KINDS: ReadonlySet<NotificationKind> = new Set(['order_placed', 'order_cancelled']);
 
 function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -130,7 +151,14 @@ function NotificationRow({ notification }: { notification: Notification }) {
       style={styles.row}
       scaleTo={0.98}
       onPress={() => {
-        if (notification.jobOrderId) router.push(`/job-order/${notification.jobOrderId}`);
+        if (notification.orderId) {
+          router.push(
+            SELLER_FACING_ORDER_KINDS.has(notification.kind)
+              ? `/creator-order/${notification.orderId}`
+              : `/order/${notification.orderId}`,
+          );
+        } else if (notification.conversationId) router.push(`/message/${notification.conversationId}`);
+        else if (notification.jobOrderId) router.push(`/job-order/${notification.jobOrderId}`);
         else if (notification.jobPostId) router.push(`/job-post/${notification.jobPostId}`);
         else if (project) router.push(`/project/${project.id}`);
         else if (listing) router.push(`/listing/${listing.id}`);

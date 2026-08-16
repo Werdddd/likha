@@ -8,12 +8,20 @@ import {
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { colors, fonts } from '../constants/theme';
+import {
+  registerForPushNotificationsAsync,
+  resolveNotificationRoute,
+  savePushToken,
+  type PushNotificationData,
+} from '../lib/push-notifications';
+import { useSessionStore } from '../store/session-store';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,12 +33,42 @@ export default function RootLayout() {
     [fonts.bodySemiBold]: PlusJakartaSans_600SemiBold,
     [fonts.bodyBold]: PlusJakartaSans_700Bold,
   });
+  const isAuthenticated = useSessionStore((s) => s.isAuthenticated);
+  const currentUserId = useSessionStore((s) => s.currentUser.id);
 
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  // Registers this device's Expo push token against the signed-in user once hydration lands
+  // on an authenticated session; server-side delivery is handled entirely by the 0038 migration's
+  // trigger on public.notifications, so there's nothing else to wire up here.
+  useEffect(() => {
+    if (!isAuthenticated || !currentUserId) return;
+    registerForPushNotificationsAsync().then((token) => {
+      if (token) savePushToken(currentUserId, token);
+    });
+  }, [isAuthenticated, currentUserId]);
+
+  useEffect(() => {
+    const routeFromResponse = (data: PushNotificationData) => {
+      const route = resolveNotificationRoute(data);
+      if (route) router.push(route);
+    };
+
+    // Cold start: app was launched by tapping a notification.
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) routeFromResponse(response.notification.request.content.data as PushNotificationData);
+    });
+
+    // Warm: app was backgrounded or foregrounded when the tap happened.
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      routeFromResponse(response.notification.request.content.data as PushNotificationData);
+    });
+    return () => subscription.remove();
+  }, []);
 
   if (!fontsLoaded) {
     return null;

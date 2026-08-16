@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
+import { unregisterPushToken } from '../lib/push-notifications';
 import { supabase } from '../lib/supabase/client';
 import { creatorUpdatesToProfileRow, profileRowToCreator, type ProfileRow } from '../lib/supabase/mappers';
 import type { Creator, ProfileMode } from '../types';
@@ -105,6 +106,9 @@ export const useSessionStore = create<SessionState>((set, get) => {
     },
 
     logOut: async () => {
+      // Deletes the row for this device's token before the session goes away -- RLS requires
+      // auth.uid() = user_id, so this only works while still signed in.
+      await unregisterPushToken();
       await supabase.auth.signOut();
       set({ isAuthenticated: false, hasCompletedOnboarding: false, currentUser: EMPTY_USER });
     },
