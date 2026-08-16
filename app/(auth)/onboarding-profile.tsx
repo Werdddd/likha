@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Chip, MultiSelectField, TextField } from '../../components/ui';
+import { Button, MultiSelectField, SelectField, TextField } from '../../components/ui';
 import { categories, regions } from '../../constants/mock-data';
 import { colors, spacing, type as t } from '../../constants/theme';
 import { useSessionStore } from '../../store/session-store';
@@ -49,12 +49,14 @@ export default function OnboardingProfileScreen() {
           searchPlaceholder="Search categories"
         />
 
-        <Text style={styles.sectionLabel}>Region</Text>
-        <View style={styles.chipWrap}>
-          {regions.map((r) => (
-            <Chip key={r} label={r} selected={region === r} onPress={() => setRegion(r)} />
-          ))}
-        </View>
+        <SelectField
+          label="Region"
+          value={region}
+          options={regions}
+          onChange={(v) => setRegion(v as Region)}
+          icon="location-outline"
+          searchPlaceholder="Search for a city or region"
+        />
 
         <Button
           label="Finish Setup"
@@ -83,17 +85,6 @@ const styles = StyleSheet.create({
     ...t.body,
     color: colors.warmBrown,
     marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  sectionLabel: {
-    ...t.label,
-    color: colors.ink,
-    marginBottom: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  chipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     marginBottom: spacing.lg,
   },
   finishButton: {

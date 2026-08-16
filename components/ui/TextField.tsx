@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 
 import { colors, radius, spacing, type as t } from '../../constants/theme';
 
@@ -52,6 +52,9 @@ const styles = StyleSheet.create({
   },
   input: {
     ...t.body,
+    // iOS clips the bottom of descenders (g/y/p) when a TextInput has an explicit
+    // lineHeight with a custom font; dropping it lets iOS use the font's natural metrics.
+    ...(Platform.OS === 'ios' ? { lineHeight: undefined } : null),
     flex: 1,
     color: colors.ink,
     paddingHorizontal: spacing.md,

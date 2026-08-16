@@ -32,7 +32,7 @@ export default function OnboardingModeScreen() {
     setIsSubmitting(true);
     await setProfileMode(selectedMode);
     setIsSubmitting(false);
-    router.push('/(auth)/onboarding-profile');
+    router.push('/(auth)/onboarding-avatar');
   };
 
   return (

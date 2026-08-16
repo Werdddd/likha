@@ -182,6 +182,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     ...t.body,
+    ...(Platform.OS === 'ios' ? { lineHeight: undefined } : null),
     color: colors.ink,
     flex: 1,
     paddingVertical: spacing.sm + 2,

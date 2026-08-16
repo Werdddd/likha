@@ -272,6 +272,7 @@ const styles = StyleSheet.create({
   },
   input: {
     ...t.body,
+    ...(Platform.OS === 'ios' ? { lineHeight: undefined } : null),
     color: colors.ink,
     backgroundColor: colors.softGray + '4d',
     borderRadius: radius.lg,

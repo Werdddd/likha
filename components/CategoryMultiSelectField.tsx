@@ -280,6 +280,7 @@ const styles = StyleSheet.create({
   },
   customInput: {
     ...t.body,
+    ...(Platform.OS === 'ios' ? { lineHeight: undefined } : null),
     flex: 1,
     color: colors.ink,
     backgroundColor: colors.softGray + '4d',

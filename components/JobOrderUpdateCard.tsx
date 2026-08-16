@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { colors, fonts, radius, shadow, spacing, type as t } from '../constants/theme';
 import { timeAgo } from '../lib/format';
@@ -270,6 +270,7 @@ const styles = StyleSheet.create({
   },
   input: {
     ...t.body,
+    ...(Platform.OS === 'ios' ? { lineHeight: undefined } : null),
     flex: 1,
     color: colors.ink,
     backgroundColor: colors.softGray + '4d',

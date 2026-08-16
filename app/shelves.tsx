@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedPressable, Card } from '../components/ui';
@@ -144,6 +144,7 @@ const styles = StyleSheet.create({
   },
   createInput: {
     ...t.body,
+    ...(Platform.OS === 'ios' ? { lineHeight: undefined } : null),
     flex: 1,
     color: colors.ink,
     backgroundColor: colors.softGray + '4d',
