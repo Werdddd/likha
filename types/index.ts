@@ -99,6 +99,12 @@ export interface FilterState {
   region: Region | null;
 }
 
+export interface ListingLink {
+  id: string;
+  label: string;
+  url: string;
+}
+
 export interface Listing {
   id: string;
   creatorId: string;
@@ -114,6 +120,7 @@ export interface Listing {
   stock: number | null;
   digitalFilePath?: string;
   digitalFileName?: string;
+  links: ListingLink[];
   isActive: boolean;
   createdAt: string;
   moderationStatus: ModerationStatus;

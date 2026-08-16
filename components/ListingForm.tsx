@@ -11,6 +11,11 @@ import { useSessionStore } from '../store/session-store';
 import type { ProductCategory, ProductType } from '../types';
 import { AnimatedPressable, Button, CheckboxSelectField, SelectField, TextField } from './ui';
 
+export interface ListingFormLink {
+  label: string;
+  url: string;
+}
+
 export interface ListingFormValues {
   title: string;
   description: string;
@@ -22,6 +27,7 @@ export interface ListingFormValues {
   images: string[];
   digitalFilePath?: string;
   digitalFileName?: string;
+  links: ListingFormLink[];
 }
 
 const PRODUCT_TYPES: Array<{ value: ProductType; label: string }> = [
@@ -75,6 +81,9 @@ export function ListingForm({
       : null,
   );
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [links, setLinks] = useState<ListingFormLink[]>(initialValues?.links ?? []);
+  const [linkLabel, setLinkLabel] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
 
   // The linked project is set by title (see below) once `myProjects` loads, since the initial
   // value we're given is a projectId but the picker works off titles.
@@ -92,7 +101,12 @@ export function ListingForm({
     if (!(options as ProductCategory[]).includes(category)) {
       setCategory(options[0]);
     }
-    if (value === 'physical') setDigitalFile(null);
+    if (value === 'physical') {
+      setDigitalFile(null);
+      setLinks([]);
+      setLinkLabel('');
+      setLinkUrl('');
+    }
   };
 
   const priceValue = Number(price);
@@ -100,7 +114,7 @@ export function ListingForm({
     title.trim().length > 0 &&
     description.trim().length > 0 &&
     priceValue > 0 &&
-    (productType === 'physical' || digitalFile !== null) &&
+    (productType === 'physical' || digitalFile !== null || links.length > 0 || linkUrl.trim().length > 0) &&
     !isSubmitting;
 
   const handleAddImages = async () => {
@@ -119,8 +133,22 @@ export function ListingForm({
     if (file) setDigitalFile(file);
   };
 
+  const handleAddLink = () => {
+    const url = linkUrl.trim();
+    if (!url) return;
+    setLinks((prev) => [...prev, { label: linkLabel.trim(), url }]);
+    setLinkLabel('');
+    setLinkUrl('');
+  };
+
+  const handleRemoveLink = (index: number) => setLinks((prev) => prev.filter((_, i) => i !== index));
+
   const handleSubmit = () => {
     const linkedProject = myProjects.find((p) => p.title === projectTitle);
+    // Carry over a link the seller typed but forgot to tap "Add link" for, instead of silently
+    // dropping it.
+    const pendingUrl = linkUrl.trim();
+    const allLinks = pendingUrl ? [...links, { label: linkLabel.trim(), url: pendingUrl }] : links;
     onSubmit({
       title: title.trim(),
       description: description.trim(),
@@ -132,6 +160,7 @@ export function ListingForm({
       images,
       digitalFilePath: digitalFile?.path,
       digitalFileName: digitalFile?.fileName,
+      links: allLinks,
     });
   };
 
@@ -215,7 +244,7 @@ export function ListingForm({
 
       {productType === 'digital' ? (
         <View style={styles.fileSection}>
-          <Text style={styles.sectionLabel}>Digital file *</Text>
+          <Text style={styles.sectionLabel}>Digital file</Text>
           {digitalFile ? (
             <View style={styles.fileRow}>
               <Ionicons name="document-attach-outline" size={18} color={colors.ink} />
@@ -243,8 +272,55 @@ export function ListingForm({
               )}
             </AnimatedPressable>
           )}
+
+          <Text style={[styles.sectionLabel, styles.linksLabel]}>Links</Text>
+          {links.map((link, index) => (
+            <View key={`${link.url}-${index}`} style={styles.fileRow}>
+              <Ionicons name="link-outline" size={18} color={colors.ink} />
+              <Text style={styles.fileName} numberOfLines={1}>
+                {link.label ? `${link.label} — ${link.url}` : link.url}
+              </Text>
+              <AnimatedPressable onPress={() => handleRemoveLink(index)} scaleTo={0.9} hitSlop={6}>
+                <Ionicons name="close-circle" size={18} color={colors.warmBrown} />
+              </AnimatedPressable>
+            </View>
+          ))}
+          <TextField
+            label="Link label (optional)"
+            placeholder="e.g. Canva template"
+            value={linkLabel}
+            onChangeText={setLinkLabel}
+          />
+          <TextField
+            label="Link URL"
+            placeholder="https://..."
+            autoCapitalize="none"
+            keyboardType="url"
+            value={linkUrl}
+            onChangeText={setLinkUrl}
+            onSubmitEditing={handleAddLink}
+          />
+          <AnimatedPressable
+            style={styles.filePicker}
+            scaleTo={0.98}
+            onPress={handleAddLink}
+            disabled={!linkUrl.trim()}
+          >
+            <Ionicons
+              name="add-circle-outline"
+              size={18}
+              color={linkUrl.trim() ? colors.warmBrown : colors.softGray}
+            />
+            <Text
+              style={[styles.filePickerLabel, !linkUrl.trim() && { color: colors.softGray }]}
+            >
+              Add link
+            </Text>
+          </AnimatedPressable>
+
           <Text style={styles.fileHint}>
-            Delivered to buyers automatically after purchase. Stays private until then.
+            Delivered to buyers automatically after purchase. A file, a link, or both — at least one is
+            required, and both stay private until then.
           </Text>
         </View>
       ) : (
@@ -356,6 +432,9 @@ const styles = StyleSheet.create({
   fileSection: {
     marginBottom: spacing.md,
   },
+  linksLabel: {
+    marginTop: spacing.md,
+  },
   fileRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -364,6 +443,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
+    marginBottom: spacing.sm,
   },
   fileName: {
     ...t.body,

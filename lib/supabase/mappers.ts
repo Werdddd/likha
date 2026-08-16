@@ -192,6 +192,13 @@ export interface ListingImageRow {
   position: number;
 }
 
+export interface ListingLinkRow {
+  id: string;
+  label: string;
+  url: string;
+  position: number;
+}
+
 export interface ListingRow {
   id: string;
   creator_id: string;
@@ -214,6 +221,7 @@ export interface ListingRow {
   rating_count: number;
   profiles?: ProfileRow | null;
   listing_images?: ListingImageRow[];
+  listing_links?: ListingLinkRow[];
 }
 
 export function listingRowToListing(row: ListingRow): Listing {
@@ -221,6 +229,11 @@ export function listingRowToListing(row: ListingRow): Listing {
     .slice()
     .sort((a, b) => a.position - b.position)
     .map((img) => img.url);
+
+  const links = (row.listing_links ?? [])
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map((link) => ({ id: link.id, label: link.label, url: link.url }));
 
   return {
     id: row.id,
@@ -237,6 +250,7 @@ export function listingRowToListing(row: ListingRow): Listing {
     stock: row.stock,
     digitalFilePath: row.digital_file_path ?? undefined,
     digitalFileName: row.digital_file_name ?? undefined,
+    links,
     isActive: row.is_active,
     createdAt: row.created_at,
     moderationStatus: row.moderation_status as ModerationStatus,

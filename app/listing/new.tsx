@@ -27,6 +27,7 @@ export default function NewListingScreen() {
       imageUrls: values.images,
       digitalFilePath: values.digitalFilePath,
       digitalFileName: values.digitalFileName,
+      links: values.links,
     });
     setIsSubmitting(false);
 

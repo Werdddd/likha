@@ -26,7 +26,7 @@ import { useMessageStore } from '../../store/message-store';
 import { useOrderStore } from '../../store/order-store';
 import { useReviewStore } from '../../store/review-store';
 import { useSessionStore } from '../../store/session-store';
-import type { OrderItem } from '../../types';
+import type { ListingLink, OrderItem } from '../../types';
 
 const PAYMENT_LABELS: Record<string, string> = {
   cod: 'Cash on Delivery',
@@ -39,6 +39,7 @@ export default function OrderDetailScreen() {
   const order = useOrderStore((s) => s.orders.find((o) => o.id === id));
   const fetchOrders = useOrderStore((s) => s.fetchOrders);
   const getDigitalDownloadUrl = useOrderStore((s) => s.getDigitalDownloadUrl);
+  const getDigitalLinks = useOrderStore((s) => s.getDigitalLinks);
   const cancelOrder = useOrderStore((s) => s.cancelOrder);
   const listingsById = useListingStore((s) => s.listingsById);
   const fetchListingById = useListingStore((s) => s.fetchById);
@@ -47,6 +48,7 @@ export default function OrderDetailScreen() {
   const myReviewsByOrderItem = useReviewStore((s) => s.myReviewsByOrderItem);
   const fetchMyReviewsForOrder = useReviewStore((s) => s.fetchMyReviewsForOrder);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [linksByListingId, setLinksByListingId] = useState<Record<string, ListingLink[]>>({});
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [isLoadingProof, setIsLoadingProof] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -80,6 +82,19 @@ export default function OrderDetailScreen() {
     });
   }, [order?.paymentProofPath]);
 
+  useEffect(() => {
+    if (!order || order.status !== 'delivered') return;
+    const digitalListingIds = order.items
+      .filter((item) => item.productType === 'digital')
+      .map((item) => item.listingId);
+    digitalListingIds.forEach((listingId) => {
+      if (linksByListingId[listingId]) return;
+      getDigitalLinks(listingId).then((links) => {
+        if (links.length > 0) setLinksByListingId((prev) => ({ ...prev, [listingId]: links }));
+      });
+    });
+  }, [order?.status, order?.items, getDigitalLinks]);
+
   if (!order) {
     return (
       <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
@@ -100,6 +115,8 @@ export default function OrderDetailScreen() {
     }
     Linking.openURL(url);
   };
+
+  const handleOpenLink = (url: string) => Linking.openURL(url);
 
   const handleCancel = () => {
     Alert.alert('Cancel this order?', 'The seller will be notified and any reserved stock is released.', [
@@ -296,21 +313,46 @@ export default function OrderDetailScreen() {
                   </Text>
                   <ProductTypeTag productType={item.productType} />
                   {canDownload ? (
-                    <AnimatedPressable
-                      style={styles.downloadButton}
-                      scaleTo={0.95}
-                      onPress={() => handleDownload(item.listingId)}
-                      disabled={downloadingId === item.listingId}
-                    >
-                      {downloadingId === item.listingId ? (
-                        <ActivityIndicator size="small" color={colors.ink} />
-                      ) : (
-                        <>
-                          <Ionicons name="cloud-download-outline" size={13} color={colors.ink} />
-                          <Text style={styles.downloadButtonLabel}>Download</Text>
-                        </>
+                    <>
+                      <View style={styles.deliverableRow}>
+                        <Text style={styles.deliverableLabel}>Download:</Text>
+                        <AnimatedPressable
+                          style={styles.downloadButton}
+                          scaleTo={0.95}
+                          onPress={() => handleDownload(item.listingId)}
+                          disabled={downloadingId === item.listingId}
+                        >
+                          {downloadingId === item.listingId ? (
+                            <ActivityIndicator size="small" color={colors.ink} />
+                          ) : (
+                            <>
+                              <Ionicons name="cloud-download-outline" size={13} color={colors.ink} />
+                              <Text style={styles.downloadButtonLabel} numberOfLines={1}>
+                                File
+                              </Text>
+                            </>
+                          )}
+                        </AnimatedPressable>
+                      </View>
+                      {(linksByListingId[item.listingId] ?? []).length > 0 && (
+                        <View style={styles.deliverableRow}>
+                          <Text style={styles.deliverableLabel}>Links:</Text>
+                          {(linksByListingId[item.listingId] ?? []).map((link) => (
+                            <AnimatedPressable
+                              key={link.id}
+                              style={styles.downloadButton}
+                              scaleTo={0.95}
+                              onPress={() => handleOpenLink(link.url)}
+                            >
+                              <Ionicons name="link-outline" size={13} color={colors.ink} />
+                              <Text style={styles.downloadButtonLabel} numberOfLines={1}>
+                                {link.label || 'Open link'}
+                              </Text>
+                            </AnimatedPressable>
+                          ))}
+                        </View>
                       )}
-                    </AnimatedPressable>
+                    </>
                   ) : (
                     isDigital &&
                     !isTerminalStatus(order.status) && (
@@ -461,7 +503,7 @@ const styles = StyleSheet.create({
   },
   itemRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: spacing.sm,
   },
   itemDivider: {
@@ -487,21 +529,34 @@ const styles = StyleSheet.create({
     color: colors.warmBrown,
     marginTop: 2,
   },
+  deliverableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  deliverableLabel: {
+    ...t.caption,
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.ink,
+  },
   downloadButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: 4,
+    maxWidth: 170,
     backgroundColor: colors.likhaYellow + '33',
     borderRadius: radius.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    marginTop: spacing.xs,
   },
   downloadButtonLabel: {
     ...t.caption,
     fontFamily: 'PlusJakartaSans_600SemiBold',
     color: colors.ink,
+    flexShrink: 1,
   },
   downloadPending: {
     flexDirection: 'row',

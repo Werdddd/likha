@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import { supabase } from '../lib/supabase/client';
 import { orderRowToOrder, type OrderRow } from '../lib/supabase/mappers';
-import type { Address, Order, OrderItem, PaymentMethod } from '../types';
+import type { Address, ListingLink, Order, OrderItem, PaymentMethod } from '../types';
 
 const ORDER_SELECT = '*, order_items(*)';
 
@@ -26,6 +26,7 @@ interface OrderState {
   ) => Promise<{ order: Order | null; error: string | null }>;
   cancelOrder: (orderId: string) => Promise<{ error: string | null }>;
   getDigitalDownloadUrl: (listingId: string) => Promise<string | null>;
+  getDigitalLinks: (listingId: string) => Promise<ListingLink[]>;
 }
 
 export const useOrderStore = create<OrderState>((set) => ({
@@ -103,5 +104,15 @@ export const useOrderStore = create<OrderState>((set) => ({
       .createSignedUrl(listingData.digital_file_path, 60 * 10);
     if (error || !data) return null;
     return data.signedUrl;
+  },
+
+  getDigitalLinks: async (listingId) => {
+    const { data, error } = await supabase
+      .from('listing_links')
+      .select('id, label, url')
+      .eq('listing_id', listingId)
+      .order('position', { ascending: true });
+    if (error || !data) return [];
+    return data as ListingLink[];
   },
 }));

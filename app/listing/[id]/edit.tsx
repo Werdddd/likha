@@ -45,6 +45,7 @@ export default function EditListingScreen() {
       imageUrls: values.images,
       digitalFilePath: values.digitalFilePath,
       digitalFileName: values.digitalFileName,
+      links: values.links,
     });
     setIsSubmitting(false);
 
@@ -125,6 +126,7 @@ export default function EditListingScreen() {
           images: listing.images,
           digitalFilePath: listing.digitalFilePath,
           digitalFileName: listing.digitalFileName,
+          links: listing.links.map((link) => ({ label: link.label, url: link.url })),
         }}
         lockProductType
         submitLabel={isSubmitting ? 'Saving…' : 'Save Changes'}

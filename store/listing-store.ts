@@ -5,7 +5,12 @@ import { listingRowToListing, type ListingRow, type ProfileRow } from '../lib/su
 import type { Listing, ProductCategory, ProductType } from '../types';
 import { useCreatorStore } from './creator-store';
 
-const LISTING_SELECT = '*, profiles!listings_creator_id_fkey(*), listing_images(*)';
+const LISTING_SELECT = '*, profiles!listings_creator_id_fkey(*), listing_images(*), listing_links(*)';
+
+interface ListingLinkInput {
+  label: string;
+  url: string;
+}
 
 interface CreateListingInput {
   title: string;
@@ -19,6 +24,7 @@ interface CreateListingInput {
   imageUrls: string[];
   digitalFilePath?: string;
   digitalFileName?: string;
+  links: ListingLinkInput[];
 }
 
 interface UpdateListingInput {
@@ -32,6 +38,7 @@ interface UpdateListingInput {
   imageUrls: string[];
   digitalFilePath?: string;
   digitalFileName?: string;
+  links: ListingLinkInput[];
 }
 
 interface ListingState {
@@ -207,6 +214,18 @@ export const useListingStore = create<ListingState>((set, get) => {
         if (imagesError) return { listing: null, error: imagesError.message };
       }
 
+      if (input.links.length > 0) {
+        const { error: linksError } = await supabase.from('listing_links').insert(
+          input.links.map((link, index) => ({
+            listing_id: listingRow.id,
+            label: link.label,
+            url: link.url,
+            position: index,
+          })),
+        );
+        if (linksError) return { listing: null, error: linksError.message };
+      }
+
       const listing = await get().fetchById(listingRow.id);
       return { listing, error: listing ? null : 'Listing was created but could not be reloaded.' };
     },
@@ -243,6 +262,21 @@ export const useListingStore = create<ListingState>((set, get) => {
           })),
         );
         if (imagesError) return { listing: null, error: imagesError.message };
+      }
+
+      const { error: deleteLinksError } = await supabase.from('listing_links').delete().eq('listing_id', listingId);
+      if (deleteLinksError) return { listing: null, error: deleteLinksError.message };
+
+      if (input.links.length > 0) {
+        const { error: linksError } = await supabase.from('listing_links').insert(
+          input.links.map((link, index) => ({
+            listing_id: listingId,
+            label: link.label,
+            url: link.url,
+            position: index,
+          })),
+        );
+        if (linksError) return { listing: null, error: linksError.message };
       }
 
       const listing = await get().fetchById(listingId);
