@@ -107,6 +107,8 @@ export interface Listing {
   createdAt: string;
   moderationStatus: ModerationStatus;
   moderationReason?: string;
+  ratingAvg: number;
+  ratingCount: number;
 }
 
 export interface CartLine {
@@ -126,12 +128,26 @@ export interface Address {
 export type PaymentMethod = 'gcash' | 'card';
 
 export interface OrderItem {
+  /** Only present once the item is a real order_items row (i.e. read from a placed order) --
+   *  absent on the checkout payload built from cart lines before the order exists. */
+  id?: string;
   listingId: string;
   title: string;
   coverUrl: string;
   price: number;
   quantity: number;
   productType: ProductType;
+}
+
+export interface Review {
+  id: string;
+  orderItemId: string;
+  listingId: string;
+  creatorId: string;
+  buyerId: string;
+  rating: number;
+  body: string;
+  createdAt: string;
 }
 
 export type OrderStatus = 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'rejected';
@@ -200,7 +216,8 @@ export type NotificationKind =
   | 'content_rejected'
   | 'content_hidden'
   | 'content_restored'
-  | 'content_removed';
+  | 'content_removed'
+  | 'review';
 
 export interface Notification {
   id: string;

@@ -50,6 +50,14 @@ export function ListingCard({ listing, creator, onPress }: ListingCardProps) {
         <Text style={styles.title} numberOfLines={2}>
           {listing.title}
         </Text>
+        {listing.ratingCount > 0 && (
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={11} color={colors.likhaYellow} />
+            <Text style={styles.ratingText}>
+              {listing.ratingAvg.toFixed(1)} ({listing.ratingCount})
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.priceBadge}>
@@ -119,6 +127,18 @@ const styles = StyleSheet.create({
   title: {
     ...t.bodyMedium,
     fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.white,
+    ...textShadow,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  ratingText: {
+    ...t.caption,
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     color: colors.white,
     ...textShadow,
   },

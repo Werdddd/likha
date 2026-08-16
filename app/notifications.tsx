@@ -32,6 +32,7 @@ const VERB: Record<NotificationKind, string> = {
   content_hidden: 'hid',
   content_restored: 'restored',
   content_removed: 'removed',
+  review: 'left a review on your listing',
 };
 
 const ICON: Record<NotificationKind, keyof typeof Ionicons.glyphMap> = {
@@ -54,6 +55,7 @@ const ICON: Record<NotificationKind, keyof typeof Ionicons.glyphMap> = {
   content_hidden: 'eye-off',
   content_restored: 'eye',
   content_removed: 'trash',
+  review: 'star',
 };
 
 function timeAgo(iso: string) {

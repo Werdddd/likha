@@ -33,6 +33,7 @@ import type {
   Project,
   ProjectMedia,
   Region,
+  Review,
 } from '../../types';
 
 export interface ProfileRow {
@@ -208,6 +209,8 @@ export interface ListingRow {
   created_at: string;
   moderation_status: string;
   moderation_reason: string | null;
+  rating_avg: number | string;
+  rating_count: number;
   profiles?: ProfileRow | null;
   listing_images?: ListingImageRow[];
 }
@@ -237,6 +240,8 @@ export function listingRowToListing(row: ListingRow): Listing {
     createdAt: row.created_at,
     moderationStatus: row.moderation_status as ModerationStatus,
     moderationReason: row.moderation_reason ?? undefined,
+    ratingAvg: Number(row.rating_avg),
+    ratingCount: row.rating_count,
   };
 }
 
@@ -268,6 +273,7 @@ export function orderRowToOrder(row: OrderRow): Order {
   return {
     id: row.id,
     items: (row.order_items ?? []).map((item) => ({
+      id: item.id,
       listingId: item.listing_id ?? '',
       title: item.title,
       coverUrl: item.cover_url ?? '',
@@ -313,6 +319,7 @@ export function creatorOrderItemRowsToCreatorOrders(rows: CreatorOrderItemRow[])
 
   for (const row of rows) {
     const item: OrderItem = {
+      id: row.id,
       listingId: row.listing_id ?? '',
       title: row.title,
       coverUrl: row.cover_url ?? '',
@@ -340,6 +347,31 @@ export function creatorOrderItemRowsToCreatorOrders(rows: CreatorOrderItemRow[])
   }
 
   return Array.from(byOrder.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export interface ReviewRow {
+  id: string;
+  order_item_id: string;
+  listing_id: string;
+  creator_id: string;
+  buyer_id: string;
+  rating: number;
+  body: string;
+  created_at: string;
+  profiles?: ProfileRow | null;
+}
+
+export function reviewRowToReview(row: ReviewRow): Review {
+  return {
+    id: row.id,
+    orderItemId: row.order_item_id,
+    listingId: row.listing_id,
+    creatorId: row.creator_id,
+    buyerId: row.buyer_id,
+    rating: row.rating,
+    body: row.body,
+    createdAt: row.created_at,
+  };
 }
 
 export interface MessageRow {

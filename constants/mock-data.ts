@@ -258,6 +258,8 @@ export const listings: Listing[] = listingSeeds.map((seed, index) => {
     isActive: true,
     createdAt: new Date(2026, 1, 1 + index * 5).toISOString(),
     moderationStatus: 'clean' as const,
+    ratingAvg: 0,
+    ratingCount: 0,
   };
 });
 

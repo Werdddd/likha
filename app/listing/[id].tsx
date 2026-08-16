@@ -7,6 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MediaStackCarousel } from '../../components/MediaStackCarousel';
 import { ModerationNoteSheet } from '../../components/ModerationNoteSheet';
+import { ReviewsSection } from '../../components/ReviewsSection';
 import { AnimatedPressable, Avatar, Button, QuantityStepper } from '../../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { formatPrice } from '../../lib/format';
@@ -14,8 +15,11 @@ import { useCartStore } from '../../store/cart-store';
 import { useCreatorStore } from '../../store/creator-store';
 import { useListingStore } from '../../store/listing-store';
 import { useProjectStore } from '../../store/project-store';
+import { useReviewStore } from '../../store/review-store';
 import { useSessionStore } from '../../store/session-store';
-import type { Listing, Project } from '../../types';
+import type { Listing, Project, Review } from '../../types';
+
+const EMPTY_REVIEWS: Review[] = [];
 
 export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,6 +31,8 @@ export default function ListingDetailScreen() {
   const adminDeleteListing = useListingStore((s) => s.adminDeleteListing);
   const creator = useCreatorStore((s) => (cachedListing ? s.getCreator(cachedListing.creatorId) : undefined));
   const addItem = useCartStore((s) => s.addItem);
+  const reviews = useReviewStore((s) => s.reviewsByListing[id] ?? EMPTY_REVIEWS);
+  const fetchReviewsForListing = useReviewStore((s) => s.fetchReviewsForListing);
   const currentUser = useSessionStore((s) => s.currentUser);
   const currentUserId = currentUser.id;
   const isAdmin = currentUser.role === 'admin';
@@ -48,6 +54,10 @@ export default function ListingDetailScreen() {
       fetchListingById(id).then(setListing);
     }
   }, [id, cachedListing, fetchListingById]);
+
+  useEffect(() => {
+    fetchReviewsForListing(id);
+  }, [id, fetchReviewsForListing]);
 
   useEffect(() => {
     if (!listing?.projectId) {
@@ -291,6 +301,8 @@ export default function ListingDetailScreen() {
               </View>
             </>
           )}
+
+          <ReviewsSection ratingAvg={listing.ratingAvg} ratingCount={listing.ratingCount} reviews={reviews} />
         </View>
       </ScrollView>
 

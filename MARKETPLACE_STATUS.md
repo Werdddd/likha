@@ -1,6 +1,6 @@
 # Likha — Marketplace/Shop Structure & Status
 
-Snapshot of what's built for the Marketplace/Shop feature (buyer side + seller side), what's stubbed, and what's missing relative to `PROJECT_SPEC.md`. Last updated 2026-08-13 after a pass that fixed the top items from the original gap list (stock integrity, listing management, cart persistence, revenue accounting, creator shop tab, buyer cancellation).
+Snapshot of what's built for the Marketplace/Shop feature (buyer side + seller side), what's stubbed, and what's missing relative to `PROJECT_SPEC.md`. Last updated 2026-08-16 after adding reviews/ratings (§2); previous pass (2026-08-13) fixed the top items from the original gap list (stock integrity, listing management, cart persistence, revenue accounting, creator shop tab, buyer cancellation).
 
 ---
 
@@ -25,10 +25,10 @@ Snapshot of what's built for the Marketplace/Shop feature (buyer side + seller s
 | Cart | [`app/cart.tsx`](app/cart.tsx), [`store/cart-store.ts`](store/cart-store.ts) | ✅ **Now persisted** via `zustand/persist` + `@react-native-async-storage/async-storage` — survives app restarts. |
 | Checkout | [`app/checkout.tsx`](app/checkout.tsx) | ✅ Shipping address (physical items only), GCash/Card selection, manual proof-of-payment upload, order summary, place order. Order placement is now a single atomic Postgres RPC (`place_order`) instead of two separate inserts, so a failed item insert (e.g. insufficient stock) can no longer leave an orphaned empty order behind. |
 | Order history | [`app/orders.tsx`](app/orders.tsx) | ✅ List of buyer's own orders with status, total, kind. |
-| Order detail | [`app/order/[id].tsx`](app/order/[id].tsx) | ✅ Status timeline, itemized breakdown, shipping address, payment verification status, digital re-download (gated to `delivered`). **New:** buyer can **cancel** an order while it's still `processing`, and a **Contact Seller** button appears for physical-item orders. |
+| Order detail | [`app/order/[id].tsx`](app/order/[id].tsx) | ✅ Status timeline, itemized breakdown, shipping address, payment verification status, digital re-download (gated to `delivered`). Buyer can **cancel** an order while it's still `processing`, a **Contact Seller** button appears for physical-item orders, and each item gets a **Rate this item** action once the order is `delivered`. |
+| Reviews & ratings | [`app/order/[id].tsx`](app/order/[id].tsx) (write), [`app/listing/[id].tsx`](app/listing/[id].tsx) (read) | ✅ Per-order-item (not per-order, since a cart can span sellers — see §3), gated to `delivered` purchases via RLS. Buyer can edit/delete their own review. Listing's `rating_avg`/`rating_count` are trigger-maintained and shown on the listing detail page and grid card; the shop owner gets a notification when a review lands. |
 
 **Remaining buyer-side gaps:**
-- No reviews/ratings anywhere (spec explicitly deferred this).
 - No wishlist/saved listings, no "Shop the look" tagging inside portfolio projects.
 - No real payment gateway — GCash/Card are labels only; payment happens off-app and is verified by the seller from an uploaded screenshot.
 - Cart persistence is device-local, not per-account — switching accounts on the same device currently shares one cart. Acceptable for now; would need a per-user storage key if that becomes a real scenario.
@@ -76,4 +76,4 @@ Revenue accounting (§3 above) now reflects this honestly — pending/unverified
 
 ## 6. What's next (not yet started)
 
-Everything still deferred per the spec: reviews, commissions/escrow, real payment gateway, wishlists, "shop the look" tagging inside projects, per-listing analytics, digital file versioning, and (if it turns out to matter) per-seller order status for mixed-seller carts.
+Still deferred per the spec: commissions/escrow, real payment gateway, wishlists, "shop the look" tagging inside projects, per-listing analytics, digital file versioning, and (if it turns out to matter) per-seller order status for mixed-seller carts. Reviews (§2) shipped.
