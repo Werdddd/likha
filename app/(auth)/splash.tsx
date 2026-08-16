@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { colors } from '../../constants/theme';
+import { useIntroStore } from '../../store/intro-store';
 
 const HOLD_MS = 3500;
 const EXIT_DURATION = 450;
@@ -14,9 +15,10 @@ const LOGO_Y_OFFSET = -20; // negative moves logo up, positive moves it down
 export default function SplashScreen() {
   const opacity = useSharedValue(0);
   const logoScale = useSharedValue(0.85);
+  const hasSeenIntro = useIntroStore((s) => s.hasSeenIntro);
 
-  const goToWelcome = () => {
-    router.replace('/(auth)/welcome');
+  const goToNext = () => {
+    router.replace(hasSeenIntro ? '/(auth)/welcome' : '/(auth)/intro');
   };
 
   const reveal = () => {
@@ -24,7 +26,7 @@ export default function SplashScreen() {
       0,
       { duration: EXIT_DURATION, easing: Easing.in(Easing.cubic) },
       (finished) => {
-        if (finished) runOnJS(goToWelcome)();
+        if (finished) runOnJS(goToNext)();
       },
     );
   };
