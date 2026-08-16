@@ -34,6 +34,7 @@ import type {
   ProjectMedia,
   Region,
   Review,
+  Shelf,
 } from '../../types';
 
 export interface ProfileRow {
@@ -651,6 +652,24 @@ export function jobOrderUpdateCommentRowToComment(row: JobOrderUpdateCommentRow)
     updateId: row.update_id,
     creatorId: row.creator_id,
     text: row.text,
+    createdAt: row.created_at,
+  };
+}
+
+export interface ShelfRow {
+  id: string;
+  owner_id: string;
+  name: string;
+  item_count: number;
+  created_at: string;
+}
+
+export function shelfRowToShelf(row: ShelfRow): Shelf {
+  return {
+    id: row.id,
+    ownerId: row.owner_id,
+    name: row.name,
+    itemCount: row.item_count,
     createdAt: row.created_at,
   };
 }

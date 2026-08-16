@@ -75,6 +75,8 @@ export default function RootLayout() {
         <Stack.Screen name="my-job-posts" />
         <Stack.Screen name="my-offers" />
         <Stack.Screen name="job-order/[id]" />
+        <Stack.Screen name="shelves" />
+        <Stack.Screen name="shelf/[id]" />
       </Stack>
     </GestureHandlerRootView>
   );

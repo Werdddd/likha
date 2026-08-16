@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { CommentsSheet } from '../../components/CommentsSheet';
 import { MediaStackCarousel } from '../../components/MediaStackCarousel';
 import { ModerationNoteSheet } from '../../components/ModerationNoteSheet';
+import { SaveToShelfSheet } from '../../components/SaveToShelfSheet';
 import { AnimatedPressable, Avatar } from '../../components/ui';
 import { iconForCategory } from '../../constants/category-icons';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
@@ -21,6 +22,7 @@ import { capitalize } from '../../lib/format';
 import { useCreatorStore } from '../../store/creator-store';
 import { useProjectStore } from '../../store/project-store';
 import { useSessionStore } from '../../store/session-store';
+import { useShelfStore } from '../../store/shelf-store';
 import type { Project } from '../../types';
 
 export default function ProjectDetailScreen() {
@@ -37,10 +39,12 @@ export default function ProjectDetailScreen() {
   const moderateProject = useProjectStore((s) => s.moderateProject);
   const adminDeleteProject = useProjectStore((s) => s.adminDeleteProject);
   const creator = useCreatorStore((s) => (cachedProject ? s.getCreator(cachedProject.creatorId) : undefined));
+  const isSaved = useShelfStore((s) => !!s.savedProjectIds[id]);
 
   const [project, setProject] = useState<Project | null | undefined>(cachedProject);
   const [appreciated, setAppreciated] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [saveSheetVisible, setSaveSheetVisible] = useState(false);
   const [noteSheet, setNoteSheet] = useState<'hide' | 'remove' | null>(null);
   const [isModerating, setIsModerating] = useState(false);
   const insets = useSafeAreaInsets();
@@ -255,7 +259,7 @@ export default function ProjectDetailScreen() {
                 />
               </Animated.View>
               <Text style={[styles.actionLabel, appreciated && styles.actionLabelActive]}>
-                {project.appreciations} Appreciations
+                {project.appreciations}
               </Text>
             </AnimatedPressable>
             <AnimatedPressable
@@ -264,7 +268,17 @@ export default function ProjectDetailScreen() {
               scaleTo={0.94}
             >
               <Ionicons name="chatbubble-outline" size={16} color={colors.ink} />
-              <Text style={styles.actionLabel}>{project.commentCount} Comments</Text>
+              <Text style={styles.actionLabel}>{project.commentCount}</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={[styles.actionButton, isSaved && styles.actionButtonActive]}
+              onPress={() => setSaveSheetVisible(true)}
+              scaleTo={0.94}
+            >
+              <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={16} color={colors.ink} />
+              <Text style={[styles.actionLabel, isSaved && styles.actionLabelActive]}>
+                {isSaved ? 'Saved' : 'Save'}
+              </Text>
             </AnimatedPressable>
           </View>
         </View>
@@ -281,6 +295,12 @@ export default function ProjectDetailScreen() {
       <CommentsSheet
         visible={commentsVisible}
         onClose={() => setCommentsVisible(false)}
+        projectId={project.id}
+      />
+
+      <SaveToShelfSheet
+        visible={saveSheetVisible}
+        onClose={() => setSaveSheetVisible(false)}
         projectId={project.id}
       />
 
@@ -441,7 +461,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     backgroundColor: colors.white,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.sm,
     ...shadow.sm,
   },

@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MediaStackCarousel } from '../../components/MediaStackCarousel';
 import { ModerationNoteSheet } from '../../components/ModerationNoteSheet';
 import { ReviewsSection } from '../../components/ReviewsSection';
+import { SaveToShelfSheet } from '../../components/SaveToShelfSheet';
 import { AnimatedPressable, Avatar, Button, QuantityStepper } from '../../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../../constants/theme';
 import { formatPrice } from '../../lib/format';
@@ -17,6 +18,7 @@ import { useListingStore } from '../../store/listing-store';
 import { useProjectStore } from '../../store/project-store';
 import { useReviewStore } from '../../store/review-store';
 import { useSessionStore } from '../../store/session-store';
+import { useShelfStore } from '../../store/shelf-store';
 import type { Listing, Project, Review } from '../../types';
 
 const EMPTY_REVIEWS: Review[] = [];
@@ -36,10 +38,12 @@ export default function ListingDetailScreen() {
   const currentUser = useSessionStore((s) => s.currentUser);
   const currentUserId = currentUser.id;
   const isAdmin = currentUser.role === 'admin';
+  const isSaved = useShelfStore((s) => !!s.savedListingIds[id]);
 
   const [listing, setListing] = useState<Listing | null | undefined>(cachedListing);
   const [linkedProject, setLinkedProject] = useState<Project | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [saveSheetVisible, setSaveSheetVisible] = useState(false);
   const [noteSheet, setNoteSheet] = useState<'hide' | 'remove' | null>(null);
   const [isModerating, setIsModerating] = useState(false);
   const insets = useSafeAreaInsets();
@@ -314,6 +318,18 @@ export default function ListingDetailScreen() {
         <Ionicons name="chevron-back" size={20} color={colors.ink} />
       </AnimatedPressable>
 
+      {!isOwner && (
+        <AnimatedPressable
+          style={[styles.saveButton, { top: insets.top + spacing.sm }]}
+          onPress={() => setSaveSheetVisible(true)}
+          scaleTo={0.9}
+        >
+          <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={18} color={isSaved ? colors.golden : colors.ink} />
+        </AnimatedPressable>
+      )}
+
+      <SaveToShelfSheet visible={saveSheetVisible} onClose={() => setSaveSheetVisible(false)} listingId={listing.id} />
+
       <ModerationNoteSheet
         visible={noteSheet === 'hide'}
         title="Hide this listing"
@@ -503,6 +519,17 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: spacing.md,
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    backgroundColor: colors.canvas + 'CC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.sm,
+  },
+  saveButton: {
+    position: 'absolute',
+    right: spacing.md,
     width: 36,
     height: 36,
     borderRadius: radius.pill,

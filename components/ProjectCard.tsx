@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { pseudoRatioForId } from '../lib/masonry';
+import { useShelfStore } from '../store/shelf-store';
 import type { Creator, Listing, Project } from '../types';
+import { SaveToShelfSheet } from './SaveToShelfSheet';
 import { AnimatedPressable } from './ui/AnimatedPressable';
 import { Avatar } from './ui/Avatar';
 import { Badge } from './ui/Badge';
@@ -25,10 +28,14 @@ const textShadow = {
 
 export function ProjectCard({ project, creator, listing, onPress }: ProjectCardProps) {
   const ratio = pseudoRatioForId(project.id);
+  const isSaved = useShelfStore((s) => !!s.savedProjectIds[project.id]);
+  const [saveSheetVisible, setSaveSheetVisible] = useState(false);
 
   return (
     <AnimatedPressable onPress={onPress} style={styles.card} scaleTo={0.97}>
       <Image source={{ uri: project.coverUrl }} style={[styles.cover, { aspectRatio: ratio }]} contentFit="cover" />
+
+      <SaveToShelfSheet visible={saveSheetVisible} onClose={() => setSaveSheetVisible(false)} projectId={project.id} />
 
       <View style={styles.topContent}>
         {creator && (
@@ -44,13 +51,14 @@ export function ProjectCard({ project, creator, listing, onPress }: ProjectCardP
         </Text>
       </View>
 
-      {/* Only ever populated for rows the viewer is allowed to see hidden (their own, or
-          an admin) -- RLS never returns hidden rows to anyone else. */}
-      {project.moderationStatus === 'rejected' && (
-        <View style={styles.moderationBadgeWrap}>
-          <Badge label="Hidden" tone="muted" />
-        </View>
-      )}
+      <View style={styles.topRightBadges}>
+        <AnimatedPressable style={styles.saveBadge} scaleTo={0.85} onPress={() => setSaveSheetVisible(true)}>
+          <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={14} color={isSaved ? colors.likhaYellow : colors.white} />
+        </AnimatedPressable>
+        {/* Only ever populated for rows the viewer is allowed to see hidden (their own, or
+            an admin) -- RLS never returns hidden rows to anyone else. */}
+        {project.moderationStatus === 'rejected' && <Badge label="Hidden" tone="muted" />}
+      </View>
 
       <View style={styles.reactionBadge}>
         <Ionicons name="heart" size={11} color={colors.likhaYellow} />
@@ -108,11 +116,22 @@ const styles = StyleSheet.create({
     color: colors.white,
     ...textShadow,
   },
-  moderationBadgeWrap: {
+  topRightBadges: {
     position: 'absolute',
     top: spacing.xs + 2,
     right: spacing.xs + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     ...shadow.sm,
+  },
+  saveBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.ink + 'B3',
   },
   reactionBadge: {
     position: 'absolute',

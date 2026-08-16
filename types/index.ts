@@ -365,3 +365,12 @@ export interface JobOrderUpdateComment {
   text: string;
   createdAt: string;
 }
+
+/** A private, personal board a buyer saves listings/projects to for later. */
+export interface Shelf {
+  id: string;
+  ownerId: string;
+  name: string;
+  itemCount: number;
+  createdAt: string;
+}
