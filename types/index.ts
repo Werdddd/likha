@@ -261,6 +261,8 @@ export interface JobPost {
   offerCount: number;
   commentCount: number;
   createdAt: string;
+  moderationStatus: ModerationStatus;
+  moderationReason?: string;
 }
 
 export type JobOfferStatus = 'pending' | 'accepted' | 'not_selected' | 'withdrawn';

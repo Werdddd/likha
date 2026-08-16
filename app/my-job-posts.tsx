@@ -27,8 +27,10 @@ export default function MyJobPostsScreen() {
   const jobPostsById = useJobPostStore((s) => s.jobPostsById);
   const fetchMyJobPosts = useJobPostStore((s) => s.fetchMyJobPosts);
   const cancelJobPost = useJobPostStore((s) => s.cancelJobPost);
+  const deleteJobPost = useJobPostStore((s) => s.deleteJobPost);
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUserId) fetchMyJobPosts(currentUserId);
@@ -59,6 +61,26 @@ export default function MyJobPostsScreen() {
             const { error } = await cancelJobPost(jobPost.id);
             setCancellingId(null);
             if (error) Alert.alert('Could not cancel this job post', error);
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDelete = (jobPost: JobPost) => {
+    Alert.alert(
+      'Delete this job post?',
+      'This permanently removes it from your job posts.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingId(jobPost.id);
+            const { error } = await deleteJobPost(jobPost.id);
+            setDeletingId(null);
+            if (error) Alert.alert('Could not delete this job post', error);
           },
         },
       ],
@@ -106,11 +128,28 @@ export default function MyJobPostsScreen() {
               </Text>
             </AnimatedPressable>
             {jobPost.status === 'open' && (
+              <View style={styles.actionRow}>
+                <Button
+                  label="Edit"
+                  variant="secondary"
+                  onPress={() => router.push(`/job-post/${jobPost.id}/edit`)}
+                  style={styles.actionButton}
+                />
+                <Button
+                  label={cancellingId === jobPost.id ? 'Cancelling…' : 'Cancel Job Post'}
+                  variant="ghost"
+                  onPress={() => handleCancel(jobPost)}
+                  disabled={cancellingId === jobPost.id}
+                  style={styles.actionButton}
+                />
+              </View>
+            )}
+            {jobPost.status === 'cancelled' && (
               <Button
-                label={cancellingId === jobPost.id ? 'Cancelling…' : 'Cancel Job Post'}
+                label={deletingId === jobPost.id ? 'Deleting…' : 'Delete'}
                 variant="ghost"
-                onPress={() => handleCancel(jobPost)}
-                disabled={cancellingId === jobPost.id}
+                onPress={() => handleDelete(jobPost)}
+                disabled={deletingId === jobPost.id}
                 style={styles.cancelButton}
               />
             )}
@@ -153,6 +192,14 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginTop: spacing.sm,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
   },
   empty: {
     flex: 1,

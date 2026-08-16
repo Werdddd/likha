@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
@@ -38,7 +38,7 @@ export function ModerationNoteSheet({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onCancel}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} />
         <SafeAreaView style={styles.sheet} edges={['bottom']}>
           <View style={styles.handle} />
@@ -73,7 +73,7 @@ export function ModerationNoteSheet({
             />
           </View>
         </SafeAreaView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

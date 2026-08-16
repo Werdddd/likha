@@ -35,19 +35,20 @@ interface JobPostFormProps {
   onSubmit: (values: JobPostFormValues) => void;
   isSubmitting?: boolean;
   userId: string;
+  initialValues?: Partial<JobPostFormValues>;
 }
 
-export function JobPostForm({ submitLabel, onSubmit, isSubmitting, userId }: JobPostFormProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<Category>(categories[0]);
-  const [budgetMin, setBudgetMin] = useState('');
-  const [budgetMax, setBudgetMax] = useState('');
-  const [budgetFlexible, setBudgetFlexible] = useState(false);
-  const [deadline, setDeadline] = useState('');
-  const [deliverableType, setDeliverableType] = useState<ProductType>('digital');
-  const [region, setRegion] = useState(ANY_REGION);
-  const [images, setImages] = useState<string[]>([]);
+export function JobPostForm({ submitLabel, onSubmit, isSubmitting, userId, initialValues }: JobPostFormProps) {
+  const [title, setTitle] = useState(initialValues?.title ?? '');
+  const [description, setDescription] = useState(initialValues?.description ?? '');
+  const [category, setCategory] = useState<Category>(initialValues?.category ?? categories[0]);
+  const [budgetMin, setBudgetMin] = useState(initialValues?.budgetMin != null ? String(initialValues.budgetMin) : '');
+  const [budgetMax, setBudgetMax] = useState(initialValues?.budgetMax != null ? String(initialValues.budgetMax) : '');
+  const [budgetFlexible, setBudgetFlexible] = useState(initialValues?.budgetFlexible ?? false);
+  const [deadline, setDeadline] = useState(initialValues?.deadline ?? '');
+  const [deliverableType, setDeliverableType] = useState<ProductType>(initialValues?.deliverableType ?? 'digital');
+  const [region, setRegion] = useState<string>(initialValues?.region ?? ANY_REGION);
+  const [images, setImages] = useState<string[]>(initialValues?.images ?? []);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 

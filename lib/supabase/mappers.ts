@@ -436,6 +436,8 @@ export interface JobPostRow {
   offer_count: number;
   comment_count: number;
   created_at: string;
+  moderation_status: string;
+  moderation_reason: string | null;
   profiles?: ProfileRow | null;
   job_post_images?: JobPostImageRow[];
 }
@@ -463,6 +465,8 @@ export function jobPostRowToJobPost(row: JobPostRow): JobPost {
     offerCount: row.offer_count,
     commentCount: row.comment_count,
     createdAt: row.created_at,
+    moderationStatus: row.moderation_status as ModerationStatus,
+    moderationReason: row.moderation_reason ?? undefined,
   };
 }
 

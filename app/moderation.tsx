@@ -9,14 +9,16 @@ import { ModerationNoteSheet } from '../components/ModerationNoteSheet';
 import { AnimatedPressable, Button } from '../components/ui';
 import { colors, radius, shadow, spacing, type as t } from '../constants/theme';
 import { useCreatorStore } from '../store/creator-store';
+import { useJobPostStore } from '../store/job-post-store';
 import { useListingStore } from '../store/listing-store';
 import { useProjectStore } from '../store/project-store';
 import { useSessionStore } from '../store/session-store';
-import type { Listing, Project } from '../types';
+import type { JobPost, Listing, Project } from '../types';
 
 type HiddenItem =
   | { kind: 'project'; id: string; createdAt: string; project: Project }
-  | { kind: 'listing'; id: string; createdAt: string; listing: Listing };
+  | { kind: 'listing'; id: string; createdAt: string; listing: Listing }
+  | { kind: 'job_post'; id: string; createdAt: string; jobPost: JobPost };
 
 export default function ModerationScreen() {
   const currentUser = useSessionStore((s) => s.currentUser);
@@ -28,20 +30,29 @@ export default function ModerationScreen() {
   const fetchHiddenListings = useListingStore((s) => s.fetchHiddenListings);
   const moderateListing = useListingStore((s) => s.moderateListing);
   const adminDeleteListing = useListingStore((s) => s.adminDeleteListing);
+  const fetchHiddenJobPosts = useJobPostStore((s) => s.fetchHiddenJobPosts);
+  const moderateJobPost = useJobPostStore((s) => s.moderateJobPost);
+  const adminDeleteJobPost = useJobPostStore((s) => s.adminDeleteJobPost);
   const getCreator = useCreatorStore((s) => s.getCreator);
 
   const [hiddenProjects, setHiddenProjects] = useState<Project[]>([]);
   const [hiddenListings, setHiddenListings] = useState<Listing[]>([]);
+  const [hiddenJobPosts, setHiddenJobPosts] = useState<JobPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<HiddenItem | null>(null);
 
   const load = useCallback(async () => {
-    const [projects, listings] = await Promise.all([fetchHidden(), fetchHiddenListings()]);
+    const [projects, listings, jobPosts] = await Promise.all([
+      fetchHidden(),
+      fetchHiddenListings(),
+      fetchHiddenJobPosts(),
+    ]);
     setHiddenProjects(projects);
     setHiddenListings(listings);
-  }, [fetchHidden, fetchHiddenListings]);
+    setHiddenJobPosts(jobPosts);
+  }, [fetchHidden, fetchHiddenListings, fetchHiddenJobPosts]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -68,20 +79,31 @@ export default function ModerationScreen() {
       createdAt: listing.createdAt,
       listing,
     }));
-    return [...projectItems, ...listingItems].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [hiddenProjects, hiddenListings]);
+    const jobPostItems: HiddenItem[] = hiddenJobPosts.map((jobPost) => ({
+      kind: 'job_post',
+      id: jobPost.id,
+      createdAt: jobPost.createdAt,
+      jobPost,
+    }));
+    return [...projectItems, ...listingItems, ...jobPostItems].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, [hiddenProjects, hiddenListings, hiddenJobPosts]);
 
   const handleRestore = async (item: HiddenItem) => {
     setWorkingId(item.id);
     const { error } =
-      item.kind === 'project' ? await moderateProject(item.id, 'restore') : await moderateListing(item.id, 'restore');
+      item.kind === 'project'
+        ? await moderateProject(item.id, 'restore')
+        : item.kind === 'listing'
+          ? await moderateListing(item.id, 'restore')
+          : await moderateJobPost(item.id, 'restore');
     setWorkingId(null);
     if (error) {
       Alert.alert('Could not restore', error);
       return;
     }
     if (item.kind === 'project') setHiddenProjects((prev) => prev.filter((p) => p.id !== item.id));
-    else setHiddenListings((prev) => prev.filter((l) => l.id !== item.id));
+    else if (item.kind === 'listing') setHiddenListings((prev) => prev.filter((l) => l.id !== item.id));
+    else setHiddenJobPosts((prev) => prev.filter((j) => j.id !== item.id));
   };
 
   const handleRemoveConfirm = async (note: string) => {
@@ -90,14 +112,19 @@ export default function ModerationScreen() {
     setRemoveTarget(null);
     setWorkingId(target.id);
     const { error } =
-      target.kind === 'project' ? await adminDeleteProject(target.id, note) : await adminDeleteListing(target.id, note);
+      target.kind === 'project'
+        ? await adminDeleteProject(target.id, note)
+        : target.kind === 'listing'
+          ? await adminDeleteListing(target.id, note)
+          : await adminDeleteJobPost(target.id, note);
     setWorkingId(null);
     if (error) {
       Alert.alert('Could not remove', error);
       return;
     }
     if (target.kind === 'project') setHiddenProjects((prev) => prev.filter((p) => p.id !== target.id));
-    else setHiddenListings((prev) => prev.filter((l) => l.id !== target.id));
+    else if (target.kind === 'listing') setHiddenListings((prev) => prev.filter((l) => l.id !== target.id));
+    else setHiddenJobPosts((prev) => prev.filter((j) => j.id !== target.id));
   };
 
   if (!isAdmin) {
@@ -129,7 +156,8 @@ export default function ModerationScreen() {
           <Ionicons name="shield-checkmark-outline" size={40} color={colors.softGray} />
           <Text style={styles.emptyTitle}>Nothing hidden</Text>
           <Text style={styles.emptyBody}>
-            Projects and listings you hide will show up here so you can restore or permanently remove them.
+            Projects, listings, and job posts you hide will show up here so you can restore or permanently remove
+            them.
           </Text>
         </ScrollView>
       ) : (
@@ -138,13 +166,31 @@ export default function ModerationScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
         >
           {items.map((item) => {
-            const title = item.kind === 'project' ? item.project.title : item.listing.title;
-            const coverUrl = item.kind === 'project' ? item.project.coverUrl : item.listing.coverUrl;
-            const creatorId = item.kind === 'project' ? item.project.creatorId : item.listing.creatorId;
-            const reason = item.kind === 'project' ? item.project.moderationReason : item.listing.moderationReason;
+            const title =
+              item.kind === 'project' ? item.project.title : item.kind === 'listing' ? item.listing.title : item.jobPost.title;
+            const coverUrl =
+              item.kind === 'project'
+                ? item.project.coverUrl
+                : item.kind === 'listing'
+                  ? item.listing.coverUrl
+                  : item.jobPost.images[0];
+            const creatorId =
+              item.kind === 'project'
+                ? item.project.creatorId
+                : item.kind === 'listing'
+                  ? item.listing.creatorId
+                  : item.jobPost.buyerId;
+            const reason =
+              item.kind === 'project'
+                ? item.project.moderationReason
+                : item.kind === 'listing'
+                  ? item.listing.moderationReason
+                  : item.jobPost.moderationReason;
             const creator = getCreator(creatorId);
             const isWorking = workingId === item.id;
-            const detailHref = item.kind === 'project' ? `/project/${item.id}` : `/listing/${item.id}`;
+            const detailHref =
+              item.kind === 'project' ? `/project/${item.id}` : item.kind === 'listing' ? `/listing/${item.id}` : `/job-post/${item.id}`;
+            const typeTagLabel = item.kind === 'project' ? 'Project' : item.kind === 'listing' ? 'Listing' : 'Job Post';
 
             return (
               <View key={`${item.kind}-${item.id}`} style={styles.card}>
@@ -156,7 +202,7 @@ export default function ModerationScreen() {
                   <Image source={{ uri: coverUrl }} style={styles.thumb} contentFit="cover" />
                   <View style={styles.cardInfo}>
                     <View style={styles.typeTag}>
-                      <Text style={styles.typeTagLabel}>{item.kind === 'project' ? 'Project' : 'Listing'}</Text>
+                      <Text style={styles.typeTagLabel}>{typeTagLabel}</Text>
                     </View>
                     <Text style={styles.cardTitle} numberOfLines={1}>
                       {title}

@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ImagePreviewModal } from '../../components/ImagePreviewModal';
 import { JobOfferCard } from '../../components/JobOfferCard';
 import { JobPostCommentsSheet } from '../../components/JobPostCommentsSheet';
+import { ModerationNoteSheet } from '../../components/ModerationNoteSheet';
 import { AnimatedPressable, Badge, type BadgeTone, Button, Card } from '../../components/ui';
 import { colors, radius, spacing, type as t } from '../../constants/theme';
 import { formatPrice } from '../../lib/format';
@@ -37,6 +38,9 @@ export default function JobPostDetailScreen() {
 
   const jobPost = useJobPostStore((s) => s.jobPostsById[id]);
   const fetchById = useJobPostStore((s) => s.fetchById);
+  const moderateJobPost = useJobPostStore((s) => s.moderateJobPost);
+  const adminDeleteJobPost = useJobPostStore((s) => s.adminDeleteJobPost);
+  const isAdmin = useSessionStore((s) => s.currentUser.role === 'admin');
 
   const offers = useJobOfferStore((s) => s.offersByJobPost[id] ?? EMPTY_OFFERS);
   const fetchOffersForPost = useJobOfferStore((s) => s.fetchOffersForPost);
@@ -52,6 +56,8 @@ export default function JobPostDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [linkedJobOrderId, setLinkedJobOrderId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [noteSheet, setNoteSheet] = useState<'hide' | 'remove' | null>(null);
+  const [isModerating, setIsModerating] = useState(false);
 
   useEffect(() => {
     if (!jobPost) fetchById(id);
@@ -128,6 +134,33 @@ export default function JobPostDetailScreen() {
     ]);
   };
 
+  const handleRestore = async () => {
+    setIsModerating(true);
+    const { error } = await moderateJobPost(id, 'restore');
+    setIsModerating(false);
+    if (error) Alert.alert('Could not restore job post', error);
+  };
+
+  const handleHideConfirm = async (note: string) => {
+    setNoteSheet(null);
+    setIsModerating(true);
+    const { error } = await moderateJobPost(id, 'hide', note);
+    setIsModerating(false);
+    if (error) Alert.alert('Could not hide job post', error);
+  };
+
+  const handleRemoveConfirm = async (note: string) => {
+    setNoteSheet(null);
+    setIsModerating(true);
+    const { error } = await adminDeleteJobPost(id, note);
+    setIsModerating(false);
+    if (error) {
+      Alert.alert('Could not remove job post', error);
+      return;
+    }
+    router.back();
+  };
+
   const budgetText =
     jobPost.budgetMin !== null && jobPost.budgetMax !== null
       ? `${formatPrice(jobPost.budgetMin)} – ${formatPrice(jobPost.budgetMax)}`
@@ -144,6 +177,52 @@ export default function JobPostDetailScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.ink} />}
       >
+        {(isBuyer || isAdmin) && jobPost.moderationStatus === 'rejected' && (
+          <View style={styles.inactiveBanner}>
+            <Ionicons name="eye-off-outline" size={14} color={colors.terracotta} />
+            <Text style={styles.inactiveBannerLabel}>
+              {jobPost.moderationReason
+                ? `Hidden by an admin: ${jobPost.moderationReason}`
+                : 'Hidden by an admin — not visible to creators.'}
+            </Text>
+          </View>
+        )}
+
+        {isAdmin && (
+          <View style={styles.adminRow}>
+            {jobPost.moderationStatus === 'rejected' ? (
+              <AnimatedPressable
+                style={styles.adminButton}
+                scaleTo={0.96}
+                disabled={isModerating}
+                onPress={handleRestore}
+              >
+                <Ionicons name="eye-outline" size={14} color={colors.ink} />
+                <Text style={styles.adminButtonLabel}>{isModerating ? 'Working…' : 'Restore'}</Text>
+              </AnimatedPressable>
+            ) : (
+              <AnimatedPressable
+                style={styles.adminButton}
+                scaleTo={0.96}
+                disabled={isModerating}
+                onPress={() => setNoteSheet('hide')}
+              >
+                <Ionicons name="eye-off-outline" size={14} color={colors.ink} />
+                <Text style={styles.adminButtonLabel}>Hide</Text>
+              </AnimatedPressable>
+            )}
+            <AnimatedPressable
+              style={[styles.adminButton, styles.adminButtonDestructive]}
+              scaleTo={0.96}
+              disabled={isModerating}
+              onPress={() => setNoteSheet('remove')}
+            >
+              <Ionicons name="trash-outline" size={14} color={colors.terracotta} />
+              <Text style={[styles.adminButtonLabel, styles.adminButtonLabelDestructive]}>Remove</Text>
+            </AnimatedPressable>
+          </View>
+        )}
+
         <Card style={styles.card}>
           <View style={styles.tagRow}>
             <View style={styles.tagRowLeft}>
@@ -154,7 +233,18 @@ export default function JobPostDetailScreen() {
             </View>
             <Badge label={POST_STATUS_LABELS[jobPost.status]} tone={POST_STATUS_TONES[jobPost.status]} />
           </View>
-          <Text style={styles.title}>{jobPost.title}</Text>
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, styles.titleFlex]}>{jobPost.title}</Text>
+            {isBuyer && jobPost.status === 'open' && (
+              <AnimatedPressable
+                style={styles.editButton}
+                onPress={() => router.push(`/job-post/${jobPost.id}/edit`)}
+                scaleTo={0.92}
+              >
+                <Ionicons name="pencil-outline" size={16} color={colors.ink} />
+              </AnimatedPressable>
+            )}
+          </View>
           <Text style={styles.description}>{jobPost.description}</Text>
 
           {jobPost.images.length > 0 && (
@@ -262,6 +352,23 @@ export default function JobPostDetailScreen() {
 
       <JobPostCommentsSheet visible={commentsOpen} onClose={() => setCommentsOpen(false)} jobPostId={jobPost.id} />
       <ImagePreviewModal visible={!!previewUrl} uri={previewUrl} onClose={() => setPreviewUrl(null)} />
+
+      <ModerationNoteSheet
+        visible={noteSheet === 'hide'}
+        title="Hide this job post"
+        body="The buyer will be notified with your reason. They can still see it themselves; nobody else can."
+        confirmLabel="Hide"
+        onCancel={() => setNoteSheet(null)}
+        onConfirm={handleHideConfirm}
+      />
+      <ModerationNoteSheet
+        visible={noteSheet === 'remove'}
+        title="Remove this job post"
+        body="This permanently deletes it. The buyer will be notified with your reason."
+        confirmLabel="Remove"
+        onCancel={() => setNoteSheet(null)}
+        onConfirm={handleRemoveConfirm}
+      />
     </SafeAreaView>
   );
 }
@@ -276,6 +383,62 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   card: {},
+  inactiveBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.terracotta + '1a',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  inactiveBannerLabel: {
+    ...t.caption,
+    color: colors.terracotta,
+    flex: 1,
+  },
+  adminRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  adminButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.softGray + '80',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 6,
+  },
+  adminButtonDestructive: {
+    backgroundColor: colors.terracotta + '1a',
+  },
+  adminButtonLabel: {
+    ...t.caption,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.ink,
+  },
+  adminButtonLabelDestructive: {
+    color: colors.terracotta,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  titleFlex: {
+    flex: 1,
+  },
+  editButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.softGray + '4d',
+  },
   referenceSection: {
     marginTop: spacing.md,
   },
